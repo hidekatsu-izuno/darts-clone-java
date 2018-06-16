@@ -3,6 +3,13 @@ package net.arnx.dartsclone.util;
 import java.util.Arrays;
 
 public class IntList {
+	public static IntList wrap(int[] array) {
+		IntList list = new IntList(0);
+		list.buf = array;
+		list.size = array.length;
+		return list;
+	}
+	
 	private static final int[] EMPTY = new int[0];
 	
 	private int[] buf;
@@ -83,5 +90,20 @@ public class IntList {
 	
 	public int[] toArray() {
 		return Arrays.copyOf(buf, size);
+	}
+	
+	public String toHexString() {
+		String hex = "0123456789ABCDEF";
+		
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < size; i++) {
+			int value = buf[i];
+			sb.append(hex.charAt((value >> 12) & 0xF));
+			sb.append(hex.charAt((value >> 8) & 0xF));
+			sb.append(hex.charAt((value >> 4) & 0xF));
+			sb.append(hex.charAt(value & 0xF));
+			sb.append(" ");
+		}
+		return sb.toString();
 	}
 }

@@ -37,11 +37,7 @@ public class DoubleArrayBuilder {
 	    buildFromDawg(dawg);
 	    dawg.clear();
 	    
-	    int[] result = new int[units.size()];
-	    for (int i = 0; i < units.size(); i++) {
-	    	result[i] = units.get(i);
-	    }
-	    return result;
+	    return units.toArray();
 	}
 	
 	public void writeTo(OutputStream out) throws IOException {

@@ -92,4 +92,19 @@ public class BooleanList {
 	public int size() {
 		return size;
 	}
+	
+	public String toBinaryString() {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < size; i++) {
+			long value = buf[i];
+			for (int shift = 0; shift < 64; shift++) {
+				sb.append(((value >> shift) & 0x1) != 0 ? '1' : '0');
+				
+				if (shift % 8 == 7) {
+					sb.append(" ");
+				}
+			}
+		}
+		return sb.toString();
+	}
 }

@@ -5,6 +5,10 @@ import net.arnx.dartsclone.util.IntList;
 public class DoubleArrayBuilderUnitList {
 	private IntList list = new IntList();
 	
+	public int[] toArray() {
+		return list.toArray();
+	}
+	
 	public void resize(int newSize, int defaultValue) {
 		list.resize(newSize, defaultValue);
 	}
