@@ -3,7 +3,7 @@ package net.arnx.dartsclone.internal;
 import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayBuilderUnitList {
-	private IntList list = new IntList();
+	IntList list = new IntList();
 	
 	public int[] toArray() {
 		return list.toArray();

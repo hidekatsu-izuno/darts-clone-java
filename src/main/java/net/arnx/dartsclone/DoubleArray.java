@@ -2,11 +2,34 @@ package net.arnx.dartsclone;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
+import net.arnx.dartsclone.internal.DoubleArrayBuilder;
+import net.arnx.dartsclone.internal.DoubleArrayEntry;
 import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArray {
+	public static DoubleArray wrap(int[] array) {
+		return new DoubleArray(array);
+	}
+	
+	public static class Builder {
+		private List<DoubleArrayEntry> list = new ArrayList<>();
+		
+		public Builder put(byte[] key, int value) {
+			list.add(new DoubleArrayEntry(key, value));
+			return this;
+		}
+		
+		public DoubleArray build() {
+			DoubleArrayBuilder builder = new DoubleArrayBuilder();
+			return new DoubleArray(builder.build(list));
+		}
+	}
+
 	public static DoubleArray load(InputStream in) throws IOException {
 		IntList list = new IntList();
 
@@ -62,7 +85,7 @@ public class DoubleArray {
 	
 	private int[] array;
 	
-	public DoubleArray(int[] array) {
+	private DoubleArray(int[] array) {
 		this.array = array;
 	}
 	
@@ -113,8 +136,16 @@ public class DoubleArray {
 		return results;
 	}
 	
-	public void clear() {
-		array = null;
+	public void writeTo(OutputStream out) throws IOException {
+		byte[] buf = new byte[4];
+		for (int i = 0; i < array.length; i++) {
+			int value = array[i];
+			buf[0] = (byte)(value & 0xFF);
+			buf[1] = (byte)((value >> 8) & 0xFF);
+			buf[2] = (byte)((value >> 16) & 0xFF);
+			buf[3] = (byte)((value >> 24) & 0xFF);
+			out.write(buf);
+		}
 	}
 
 	@Override

@@ -1,15 +1,9 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.internal;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
-
-import net.arnx.dartsclone.internal.DawgBuilder;
-import net.arnx.dartsclone.internal.DoubleArrayBuilderExtraUnitList;
-import net.arnx.dartsclone.internal.DoubleArrayBuilderUnitList;
+import java.util.Collections;
+import java.util.List;
 import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayBuilder {
@@ -19,37 +13,20 @@ public class DoubleArrayBuilder {
 	private static final int UPPER_MASK = 0xFF << 21;
 	private static final int LOWER_MASK = 0xFF;
 	
-	private Map<byte[], Integer> keyset = new HashMap<>();
-	
 	private DoubleArrayBuilderUnitList units = new DoubleArrayBuilderUnitList();
 	private DoubleArrayBuilderExtraUnitList extras = new DoubleArrayBuilderExtraUnitList();
 	private IntList labels = new IntList();
 	private IntList table = new IntList();
 	private int extrasHead;
 	
-	public void put(String key, int value) {
-		keyset.put(key.getBytes(StandardCharsets.UTF_8), value);
-	}
-	
-	public int[] build() {
+	public int[] build(List<DoubleArrayEntry> keyset) {
 		DawgBuilder dawg = new DawgBuilder();
-	    buildDawg(dawg);
+	    buildDawg(keyset, dawg);
+	    System.out.println("J: { " + dawg.toString() + " }");
 	    buildFromDawg(dawg);
 	    dawg.clear();
 	    
 	    return units.toArray();
-	}
-	
-	public void writeTo(OutputStream out) throws IOException {
-		byte[] buf = new byte[4];
-		for (int i = 0; i < units.size(); i++) {
-			int value = units.get(i);
-			buf[0] = (byte)(value & 0xFF);
-			buf[1] = (byte)((value >> 8) & 0xFF);
-			buf[2] = (byte)((value >> 16) & 0xFF);
-			buf[3] = (byte)((value >> 24) & 0xFF);
-			out.write(buf);
-		}
 	}
 	
 	public void clear() {
@@ -60,22 +37,23 @@ public class DoubleArrayBuilder {
 		extrasHead = 0;
 	}
 	
-	private void buildDawg(DawgBuilder dawg) {
-		TreeMap<byte[], Integer> map = new TreeMap<>((x, y) -> {
-			int min = Math.min(x.length, y.length);
+	private void buildDawg(List<DoubleArrayEntry> keyset, DawgBuilder dawg) {
+		Collections.sort(keyset, (x, y) -> {
+			byte[] xkey = x.key();
+			byte[] ykey = y.key();
+			int min = Math.min(xkey.length, ykey.length);
 	        for (int i = 0; i < min; i++) {
-	          int result = (x[i] & 0xFF) - (y[i] & 0xFF);
+	          int result = (xkey[i] & 0xFF) - (ykey[i] & 0xFF);
 	          if (result != 0) {
 	            return result;
 	          }
 	        }
-	        return x.length - y.length;
+	        return xkey.length - ykey.length;
 		});
-		map.putAll(keyset);
 		
 		dawg.init();
-		for (Map.Entry<byte[], Integer> entry : map.entrySet()) {
-			dawg.insert(entry.getKey(), entry.getValue());
+		for (DoubleArrayEntry entry : keyset) {
+			dawg.insert(entry.key(), entry.value());
 		}
 		dawg.finish();
 	}

@@ -4,11 +4,22 @@ import net.arnx.dartsclone.util.BooleanList;
 import net.arnx.dartsclone.util.IntList;
 
 public class DawgNodeList {
-	private IntList childs;
-	private IntList siblings;
-	private IntList labels;
-	private BooleanList isStates;
-	private BooleanList hasSiblings;
+	IntList childs;
+	IntList siblings;
+	IntList labels;
+	BooleanList isStates;
+	BooleanList hasSiblings;
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("childs: ").append(childs.toHexString()).append(", ");
+		sb.append("siblings: ").append(siblings.toHexString()).append(", ");
+		sb.append("labels: ").append(labels.toHexString()).append(", ");
+		sb.append("isStates: ").append(isStates.toBinaryString()).append(", ");
+		sb.append("hasSiblings: ").append(hasSiblings.toBinaryString());
+		return sb.toString();
+	}
 	
 	public DawgNodeList() {
 		childs = new IntList();

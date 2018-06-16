@@ -15,14 +15,28 @@ public class DawgBuilder {
 		return key;
 	}
 	
-	private DawgNodeList nodes = new DawgNodeList();
-	private DawgUnitList units = new DawgUnitList();
-	private IntList labels = new IntList();
-	private BitVector isIntersections = new BitVector();
-	private IntList table = new IntList();
-	private IntList nodeStack = new IntList();
-	private IntList recycleBin = new IntList();
-	private int numStates;
+	DawgNodeList nodes = new DawgNodeList();
+	DawgUnitList units = new DawgUnitList();
+	IntList labels = new IntList();
+	BitVector isIntersections = new BitVector();
+	IntList table = new IntList();
+	IntList nodeStack = new IntList();
+	IntList recycleBin = new IntList();
+	int numStates;
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("nodes: { ").append(nodes.toString()).append(" }, ");
+		sb.append("units: ").append(units.toString()).append(", ");
+		sb.append("labels: ").append(labels.toHexString()).append(", ");
+		sb.append("isIntersections: { ").append(isIntersections.toString()).append(" }, ");
+		sb.append("table: ").append(table.toHexString()).append(", ");
+		sb.append("nodeStack: ").append(nodeStack.toHexString()).append(", ");
+		sb.append("recycleBin: ").append(recycleBin.toHexString()).append(", ");
+		sb.append("numStates: ").append(numStates);
+		return sb.toString();
+	}
 	
 	public int root() {
 		return 0;

@@ -14,15 +14,24 @@ public class BitVector {
 		return unit & 0xFF;
 	}
 	
-	private IntList units = new IntList();
-	private IntList ranks = new IntList();
-	private int numOnes;
-	private int size;
+	IntList units = new IntList();
+	IntList ranks = new IntList();
+	int numOnes;
+	int size;
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("units: ").append(units.toHexString()).append(", ");
+		sb.append("ranks: ").append(ranks.toHexString()).append(", ");
+		sb.append("numOnes: ").append(numOnes).append(", ");
+		sb.append("size: ").append(size);
+		return sb.toString();
+	}
 	
 	public boolean get(int id) {
 		return (units.get(id / UNIT_SIZE) >> (id % UNIT_SIZE) & 1) == 1;
 	}
-	
 	
 	public int rank(int id) {
 		int unit_id = id / UNIT_SIZE;
