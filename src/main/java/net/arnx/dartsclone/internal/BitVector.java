@@ -5,7 +5,7 @@ import net.arnx.dartsclone.util.IntList;
 public class BitVector {
 	private static final int UNIT_SIZE = 32 * 8;
 	
-	private static int pop_count(int unit) {
+	private static int popCount(int unit) {
 		unit = ((unit & 0xAAAAAAAA) >> 1) + (unit & 0x55555555);
 		unit = ((unit & 0xCCCCCCCC) >> 2) + (unit & 0x33333333);
 		unit = ((unit >> 4) + unit) & 0x0F0F0F0F;
@@ -34,8 +34,8 @@ public class BitVector {
 	}
 	
 	public int rank(int id) {
-		int unit_id = id / UNIT_SIZE;
-		return ranks.get(unit_id) + pop_count(units.get(unit_id)
+		int unitId = id / UNIT_SIZE;
+		return ranks.get(unitId) + popCount(units.get(unitId)
 			& (~0 >> (UNIT_SIZE - (id % UNIT_SIZE) - 1)));
 	}
 	
@@ -74,7 +74,7 @@ public class BitVector {
 		numOnes = 0;
 		for (int i = 0; i < units.size(); ++i) {
 			ranks.set(i, numOnes);
-			numOnes += pop_count(units.get(i));
+			numOnes += popCount(units.get(i));
 		}
 	}
 	

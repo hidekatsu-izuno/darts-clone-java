@@ -305,13 +305,13 @@ public class DawgBuilder {
 	private int findNode(int nodeId, int[] hashId) {
 		hashId[0] = hashNode(nodeId) % table.size();
 		for ( ; ; hashId[0] = (hashId[0] + 1) % table.size()) {
-			int unit_id = table.get(hashId[0]);
-			if (unit_id == 0) {
+			int unitId = table.get(hashId[0]);
+			if (unitId == 0) {
 				break;
 			}
 
-			if (areEqual(nodeId, unit_id)) {
-				return unit_id;
+			if (areEqual(nodeId, unitId)) {
+				return unitId;
 			}
 		}
 		return 0;

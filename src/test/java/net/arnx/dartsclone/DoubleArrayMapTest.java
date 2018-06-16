@@ -41,20 +41,22 @@ class DoubleArrayMapTest {
 		try (InputStream in = Files.newInputStream(Paths.get("./data/test1.dat"))) {
 			da3 = DoubleArray.load(in);
 		}
-		assertEquals(1, da3.exactMatchSearch("ALGOL".getBytes(StandardCharsets.UTF_8)));
-		assertEquals(-1, da3.exactMatchSearch("APPARE".getBytes(StandardCharsets.UTF_8)));
+		assertEquals(1, da3.get("ALGOL".getBytes(StandardCharsets.UTF_8)));
+		assertEquals(-1, da3.get("APPARE".getBytes(StandardCharsets.UTF_8)));
 		
 		DoubleArray da4;
 		try (InputStream in = Files.newInputStream(Paths.get("./data/test6.dat"))) {
 			da4 = DoubleArray.load(in);
-		}		
-		assertEquals(1, da4.exactMatchSearch("ALGOL".getBytes(UTF_8)));
-		assertEquals(2, da4.exactMatchSearch("ANSI".getBytes(UTF_8)));
-		assertEquals(3, da4.exactMatchSearch("ARCO".getBytes(UTF_8)));
-		assertEquals(4, da4.exactMatchSearch("ARPA".getBytes(UTF_8)));
-		assertEquals(5, da4.exactMatchSearch("ARPANET".getBytes(UTF_8)));
-		assertEquals(6, da4.exactMatchSearch("ASCII".getBytes(UTF_8)));
-		assertEquals(-1, da4.exactMatchSearch("APPARE".getBytes(UTF_8)));
+		}
+		assertEquals(1, da4.get("ALGOL".getBytes(UTF_8)));
+		assertEquals(2, da4.get("ANSI".getBytes(UTF_8)));
+		assertEquals(3, da4.get("ARCO".getBytes(UTF_8)));
+		assertEquals(4, da4.get("ARPA".getBytes(UTF_8)));
+		assertEquals(5, da4.get("ARPANET".getBytes(UTF_8)));
+		assertEquals(6, da4.get("ASCII".getBytes(UTF_8)));
+		assertEquals(-1, da4.get("APPARE".getBytes(UTF_8)));
+		
+		assertArrayEquals(new int[] { 4, 5 }, da4.findByCommonPrefix("ARPANET".getBytes(UTF_8)).toArray());
 		
 		DoubleArray test1;
 		try (InputStream in = Files.newInputStream(Paths.get("./data/test1.dat"))) {

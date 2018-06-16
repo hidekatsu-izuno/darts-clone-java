@@ -74,8 +74,8 @@ public class DoubleArrayBuilder {
 			DoubleArrayBuilderExtraUnitList extras) {
 		int dawgChildId = dawg.child(dawgId);
 		if (dawg.isIntersection(dawgChildId)) {
-			int intersection_id = dawg.intersectionId(dawgChildId);
-			int offset = table.get(intersection_id);
+			int intersectionId = dawg.intersectionId(dawgChildId);
+			int offset = table.get(intersectionId);
 			if (offset != 0) {
 				offset ^= dicId;
 				if ((offset & UPPER_MASK) == 0 || (offset & LOWER_MASK) == 0) {
@@ -94,10 +94,10 @@ public class DoubleArrayBuilder {
 		}
 
 		do {
-			int child_label = dawg.label(dawgChildId);
-			int dic_child_id = offset ^ child_label;
-			if (child_label != '\0') {
-				buildFromDawg(dawg, dawgChildId, dic_child_id, table, extras);
+			int childLabel = dawg.label(dawgChildId);
+			int dicChildId = offset ^ childLabel;
+			if (childLabel != '\0') {
+				buildFromDawg(dawg, dawgChildId, dicChildId, table, extras);
 			}
 			dawgChildId = dawg.sibling(dawgChildId);
 		} while (dawgChildId != 0);
@@ -141,14 +141,14 @@ public class DoubleArrayBuilder {
 			return units.size() | (id & LOWER_MASK);
 		}
 
-		int unfixed_id = extras.head();
+		int unfixedId = extras.head();
 		do {
-			int offset = unfixed_id ^ labels.get(0);
+			int offset = unfixedId ^ labels.get(0);
 			if (isValidOffset(id, offset, labels, extras)) {
 				return offset;
 			}
-			unfixed_id = extras.next(unfixed_id);
-		} while (unfixed_id != extras.head());
+			unfixedId = extras.next(unfixedId);
+		} while (unfixedId != extras.head());
 
 		return units.size() | (id & LOWER_MASK);
 	}
@@ -159,8 +159,8 @@ public class DoubleArrayBuilder {
 			return false;
 		}
 
-		int rel_offset = id ^ offset;
-		if ((rel_offset & LOWER_MASK) != 0 && (rel_offset & UPPER_MASK) != 0) {
+		int relOffset = id ^ offset;
+		if ((relOffset & LOWER_MASK) != 0 && (relOffset & UPPER_MASK) != 0) {
 			return false;
 		}
 

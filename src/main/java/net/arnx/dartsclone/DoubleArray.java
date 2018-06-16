@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import net.arnx.dartsclone.internal.DoubleArrayBuilder;
 import net.arnx.dartsclone.internal.DoubleArrayEntry;
@@ -51,72 +52,38 @@ public class DoubleArray {
 		return new DoubleArray(list.toArray());
 	}
 	
-	/**
-	 *  hasLeaf() returns whether a leaf unit is immediately derived from the
-	 *  unit (true) or not (false).
-	 */
-	private static boolean hasLeaf(int unit) {
-		return ((unit >> 8) & 1) == 1;
-	}
-	
-	/**
-	 * value() returns the value stored in the unit, and thus value() is
-	 * available when and only when the unit is a leaf unit.
-	 */
-	private static int value(int unit) {
-		return unit & ((1 << 31) - 1);
-	}
-
-	/**
-	 * label() returns the label associted with the unit. Note that a leaf unit
-	 * always returns an invalid label. For this feature, leaf unit's label()
-	 * returns an <id_type> that has the MSB of 1.
-	 */
-	private static int label(int unit) {
-		return unit & ((1 << 31) | 0xFF);
-	}
-	
-	/**
-	 * offset() returns the offset from the unit to its derived units.
-	 */
-	private static int offset(int unit) {
-		return (unit >> 10) << ((unit & (1 << 9)) >> 6);
-	}
-	
 	private int[] array;
 	
 	private DoubleArray(int[] array) {
 		this.array = array;
 	}
 	
-	public int exactMatchSearch(byte[] key) {
-		int result = -1;
+	public int get(byte[] key) {
+		int unit = array[0];
 		int nodePos = 0;
-
-		int unit = array[nodePos];
+		
 		for (int i = 0; i < key.length; i++) {
 			int c = (key[i] & 0xFF);
+			
 			nodePos ^= offset(unit) ^ c;
 			unit = array[nodePos];
 			if (label(unit) != c) {
-				return result;
+				return -1;
 			}
 		}
 
 		if (!hasLeaf(unit)) {
-			return result;
+			return -1;
 		}
-		unit = array[nodePos ^ offset(unit)];
-		result = value(unit);
-		return result;
+		
+		return value(array[nodePos ^ offset(unit)]);
 	}
 	
-	public IntList commonPrefixSearch(byte[] key) {
-		IntList results = new IntList();
-		int nodePos = 0;
-
-		int unit = array[nodePos];
-		nodePos ^= offset(unit);
+	public IntStream findByCommonPrefix(byte[] key) {
+		IntStream.Builder builder = IntStream.builder();
+		
+		int unit = array[0];
+		int nodePos = offset(unit);
 		
 		for (int i = 0; i < key.length; i++) {
 			int c = (key[i] & 0xFF);
@@ -124,16 +91,16 @@ public class DoubleArray {
 			nodePos ^= c;
 			unit = array[nodePos];
 			if (label(unit) != c) {
-				return results;
+				return builder.build();
 			}
 
 			nodePos ^= offset(unit);
 			if (hasLeaf(unit)) {
-				results.add(value(array[nodePos]));
+				builder.accept(value(array[nodePos]));
 			}
 		}
-
-		return results;
+		
+		return builder.build();
 	}
 	
 	public void writeTo(OutputStream out) throws IOException {
@@ -177,5 +144,21 @@ public class DoubleArray {
 	@Override
 	public String toString() {
 		return IntList.wrap(array).toHexString();
+	}
+	
+	private static boolean hasLeaf(int unit) {
+		return ((unit >> 8) & 1) == 1;
+	}
+	
+	private static int value(int unit) {
+		return unit & ((1 << 31) - 1);
+	}
+
+	private static int label(int unit) {
+		return unit & ((1 << 31) | 0xFF);
+	}
+	
+	private static int offset(int unit) {
+		return (unit >> 10) << ((unit & (1 << 9)) >> 6);
 	}
 }
