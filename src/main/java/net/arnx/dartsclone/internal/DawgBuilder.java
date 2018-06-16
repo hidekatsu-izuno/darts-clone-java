@@ -1,4 +1,6 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.internal;
+
+import net.arnx.dartsclone.util.IntList;
 
 public class DawgBuilder {
 	private static final int INITIAL_TABLE_SIZE = 1 << 10;
@@ -15,7 +17,7 @@ public class DawgBuilder {
 	
 	private DawgNodeList nodes = new DawgNodeList();
 	private DawgUnitList units = new DawgUnitList();
-	private StringBuilder labels = new StringBuilder();
+	private IntList labels = new IntList();
 	private BitVector isIntersections = new BitVector();
 	private IntList table = new IntList();
 	private IntList nodeStack = new IntList();
@@ -41,8 +43,9 @@ public class DawgBuilder {
 	public boolean isLeaf(int id) {
 		return label(id) == '\0';
 	}
-	public char label(int id) {
-		return labels.charAt(id);
+	
+	public int label(int id) {
+		return labels.get(id);
 	}
 
 	public boolean isIntersection(int id) {
@@ -77,7 +80,7 @@ public class DawgBuilder {
 		flush(0);
 
 		units.set(0, nodes.unit(0));
-		labels.setCharAt(0, nodes.label(0));
+		labels.set(0, nodes.label(0));
 
 		nodes.clear();
 		table.clear();
@@ -87,28 +90,28 @@ public class DawgBuilder {
 		isIntersections.build();
 	}
 	
-	public void insert(String key, int value) {
+	public void insert(byte[] key, int value) {
 		if (value < 0) {
 			throw new IllegalArgumentException("failed to insert key: negative value");
-		} else if (key.isEmpty()) {
+		} else if (key.length == 0) {
 			throw new IllegalArgumentException("failed to insert key: zero-length key");
 		}
 
 		int id = 0;
 		int key_pos = 0;
 
-		for ( ; key_pos <= key.length(); ++key_pos) {
+		for ( ; key_pos <= key.length; ++key_pos) {
 			int child_id = nodes.child(id);
 			if (child_id == 0) {
 				break;
 			}
 
-			char key_label = key.charAt(key_pos);
-			if (key_pos < key.length() && key_label == '\0') {
+			int key_label = key[key_pos] & 0xFF;
+			if (key_pos < key.length && key_label == 0) {
 				throw new IllegalStateException("failed to insert key: invalid null character");
 			}
 
-			char unit_label = nodes.label(child_id);
+			int unit_label = nodes.label(child_id);
 			if (key_label < unit_label) {
 				throw new IllegalStateException("failed to insert key: wrong key order");
 			} else if (key_label > unit_label) {
@@ -119,12 +122,12 @@ public class DawgBuilder {
 			id = child_id;
 		}
 
-		if (key_pos > key.length()) {
+		if (key_pos > key.length) {
 			return;
 		}
 
-		for ( ; key_pos <= key.length(); ++key_pos) {
-			char key_label = (key_pos < key.length()) ? key.charAt(key_pos) : '\0';
+		for ( ; key_pos <= key.length; ++key_pos) {
+			int key_label = (key_pos < key.length) ? (key[key_pos] & 0xFF) : 0;
 			int child_id = appendNode();
 
 			if (nodes.child(id) == 0) {
@@ -143,7 +146,7 @@ public class DawgBuilder {
 	public void clear() {
 		nodes.clear();
 		units.clear();
-		labels.setLength(0);
+		labels.clear();
 		isIntersections.clear();
 		table.clear();
 		nodeStack.clear();
@@ -167,7 +170,7 @@ public class DawgBuilder {
 	private int appendUnit() {
 		isIntersections.add();
 		units.add(0);
-		labels.append('\0');
+		labels.add(0);
 
 		return isIntersections.size() - 1;
 	}
@@ -197,7 +200,7 @@ public class DawgBuilder {
 				}
 				for (int i = node_id; i != 0; i = nodes.sibling(i)) {
 					units.set(unit_id, nodes.unit(i));
-					labels.setCharAt(unit_id, nodes.label(i));
+					labels.set(unit_id, nodes.label(i));
 					--unit_id;
 				}
 				match_id = unit_id + 1;
@@ -222,7 +225,7 @@ public class DawgBuilder {
 
 		for (int i = 1; i < units.size(); ++i) {
 			int id = i;
-			if (labels.charAt(id) == '\0' || units.isState(id)) {
+			if (labels.get(id) == 0 || units.isState(id)) {
 				int[] hash_id = new int[1];
 				find_unit(id, hash_id);
 				table.set(hash_id[0], id);
@@ -276,7 +279,7 @@ public class DawgBuilder {
 
 		for (int i = node_id; i != 0; i = nodes.sibling(i), --unit_id) {
 			if (nodes.unit(i) != units.unit(unit_id) ||
-					nodes.label(i) != labels.charAt(unit_id)) {
+					nodes.label(i) != labels.get(unit_id)) {
 				return false;
 			}
 		}
@@ -287,7 +290,7 @@ public class DawgBuilder {
 		int hash_value = 0;
 		for ( ; id != 0; ++id) {
 			int unit = units.unit(id);
-			char label = labels.charAt(id);
+			int label = labels.get(id);
 			hash_value ^= hash((label << 24) ^ unit);
 
 			if (units.hasSibling(id) == false) {
@@ -301,7 +304,7 @@ public class DawgBuilder {
 		int hash_value = 0;
 		for ( ; id != 0; id = nodes.sibling(id)) {
 			int unit = nodes.unit(id);
-			char label = nodes.label(id);
+			int label = nodes.label(id);
 			hash_value ^= hash((label << 24) ^ unit);
 		}
 		return hash_value;

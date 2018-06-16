@@ -1,4 +1,6 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.internal;
+
+import net.arnx.dartsclone.util.IntList;
 
 public class BitVector {
 	private static final int UNIT_SIZE = 32 * 8;

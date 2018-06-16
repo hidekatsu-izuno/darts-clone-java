@@ -1,32 +1,35 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.internal;
+
+import net.arnx.dartsclone.util.BooleanList;
+import net.arnx.dartsclone.util.IntList;
 
 public class DawgNodeList {
 	private IntList childs;
 	private IntList siblings;
-	private StringBuilder labels;
+	private IntList labels;
 	private BooleanList isStates;
 	private BooleanList hasSiblings;
 	
 	public DawgNodeList() {
 		childs = new IntList();
 		siblings = new IntList();
-		labels = new StringBuilder();
+		labels = new IntList();
 		isStates = new BooleanList();
 		hasSiblings = new BooleanList();
 	}
 	
-	public void add(int child, int sibling, char label, boolean isState, boolean hasSibling) {
+	public void add(int child, int sibling, int label, boolean isState, boolean hasSibling) {
 		childs.add(child);
 		siblings.add(sibling);
-		labels.append(label);
+		labels.add(label);
 		isStates.add(isState);
 		hasSiblings.add(hasSibling);
 	}
 	
-	public void set(int index, int child, int sibling, char label, boolean isState, boolean hasSibling) {
+	public void set(int index, int child, int sibling, int label, boolean isState, boolean hasSibling) {
 		childs.set(index, child);
 		siblings.set(index, sibling);
-		labels.setCharAt(index, label);
+		labels.set(index, label);
 		isStates.set(index, isState);
 		hasSiblings.set(index, hasSibling);
 	}
@@ -34,7 +37,7 @@ public class DawgNodeList {
 	public void clear() {
 		childs.clear();
 		siblings.clear();
-		labels.setLength(0);
+		labels.clear();
 		isStates.clear();
 		hasSiblings.clear();
 	}
@@ -55,8 +58,8 @@ public class DawgNodeList {
 		childs.set(index, value);
 	}
 	
-	public void setLabel(int index, char label) {
-		labels.setCharAt(index, label);
+	public void setLabel(int index, int label) {
+		labels.set(index, label);
 	}
 	
 	public void setIsState(int index, boolean isState) {
@@ -79,8 +82,8 @@ public class DawgNodeList {
 		return childs.get(index);
 	}
 	
-	public char label(int index) {
-		return labels.charAt(index);
+	public int label(int index) {
+		return labels.get(index);
 	}
 	
 	public boolean isState(int index) {
@@ -92,7 +95,7 @@ public class DawgNodeList {
 	}
 
 	public int unit(int index) {
-		if (labels.charAt(index) == '\0') {
+		if (labels.get(index) == 0) {
 			return (childs.get(index) << 1) | (hasSiblings.get(index) ? 1 : 0);
 		}
 		return (childs.get(index) << 2) | (isStates.get(index) ? 2 : 0) | (hasSiblings.get(index) ? 1 : 0);

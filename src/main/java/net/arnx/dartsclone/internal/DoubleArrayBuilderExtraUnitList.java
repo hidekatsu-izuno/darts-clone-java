@@ -1,4 +1,7 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.internal;
+
+import net.arnx.dartsclone.util.BooleanList;
+import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayBuilderExtraUnitList {
 	private IntList prevs = new IntList();

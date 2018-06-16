@@ -1,4 +1,6 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.internal;
+
+import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayBuilderUnitList {
 	private IntList list = new IntList();
@@ -37,7 +39,7 @@ public class DoubleArrayBuilderUnitList {
 		return unit;
 	}
 	
-	public int setLabel(int index, char label) {
+	public int setLabel(int index, int label) {
 		int unit = list.get(index);
 		unit = (unit & ~0xFF) | label;
 		list.set(index, unit);

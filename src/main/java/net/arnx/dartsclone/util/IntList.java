@@ -1,4 +1,4 @@
-package net.arnx.dartsclone;
+package net.arnx.dartsclone.util;
 
 import java.util.Arrays;
 

@@ -2,14 +2,11 @@ package net.arnx.dartsclone;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
 
-public class DoubleArrayMap {
-	public static DoubleArrayMap load(InputStream in) throws IOException {
+import net.arnx.dartsclone.util.IntList;
+
+public class DoubleArray {
+	public static DoubleArray load(InputStream in) throws IOException {
 		IntList list = new IntList();
 
 		int value = 0;
@@ -27,7 +24,7 @@ public class DoubleArrayMap {
 			}
 		}
 		
-		return new DoubleArrayMap(list.toArray());
+		return new DoubleArray(list.toArray());
 	}
 	
 	/**
@@ -64,36 +61,17 @@ public class DoubleArrayMap {
 	
 	private int[] array;
 	
-	private DoubleArrayMap(int[] array) {
+	public DoubleArray(int[] array) {
 		this.array = array;
 	}
 	
-	public DoubleArrayMap(SortedMap<String, Integer> map) {
-		List<Map.Entry<String, Integer>> keyset = new ArrayList<>(map.entrySet());
-		
-		DoubleArrayBuilder builder = new DoubleArrayBuilder();
-		this.array = builder.build(keyset);
-	}
-	
-	public void writeTo(OutputStream out) throws IOException {
-		byte[] buf = new byte[4];
-		for (int i = 0; i < array.length; i++) {
-			int value = array[i];
-			buf[0] = (byte)(value & 0xFF);
-			buf[1] = (byte)((value >> 8) & 0xFF);
-			buf[2] = (byte)((value >> 16) & 0xFF);
-			buf[3] = (byte)((value >> 24) & 0xFF);
-			out.write(buf);
-		}
-	}
-	
-	public int exactMatchSearch(String key) {
+	public int exactMatchSearch(byte[] key) {
 		int result = -1;
 		int nodePos = 0;
 
 		int unit = array[nodePos];
-		for (int i = 0; i < key.length(); i++) {
-			char c = key.charAt(i);
+		for (int i = 0; i < key.length; i++) {
+			int c = (key[i] & 0xFF);
 			nodePos ^= offset(unit) ^ c;
 			unit = array[nodePos];
 			if (label(unit) != c) {

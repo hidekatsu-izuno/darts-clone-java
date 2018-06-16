@@ -1,7 +1,16 @@
 package net.arnx.dartsclone;
 
-import java.util.List;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
+
+import net.arnx.dartsclone.internal.DawgBuilder;
+import net.arnx.dartsclone.internal.DoubleArrayBuilderExtraUnitList;
+import net.arnx.dartsclone.internal.DoubleArrayBuilderUnitList;
+import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayBuilder {
 	private static final int BLOCK_SIZE = 256;
@@ -10,15 +19,21 @@ public class DoubleArrayBuilder {
 	private static final int UPPER_MASK = 0xFF << 21;
 	private static final int LOWER_MASK = 0xFF;
 	
+	private Map<byte[], Integer> keyset = new HashMap<>();
+	
 	private DoubleArrayBuilderUnitList units = new DoubleArrayBuilderUnitList();
 	private DoubleArrayBuilderExtraUnitList extras = new DoubleArrayBuilderExtraUnitList();
-	private StringBuilder labels = new StringBuilder();
+	private IntList labels = new IntList();
 	private IntList table = new IntList();
 	private int extrasHead;
 	
-	public int[] build(List<Map.Entry<String, Integer>> keyset) {
+	public void put(String key, int value) {
+		keyset.put(key.getBytes(StandardCharsets.UTF_8), value);
+	}
+	
+	public int[] build() {
 		DawgBuilder dawg = new DawgBuilder();
-	    buildDawg(keyset, dawg);
+	    buildDawg(dawg);
 	    buildFromDawg(dawg);
 	    dawg.clear();
 	    
@@ -29,9 +44,41 @@ public class DoubleArrayBuilder {
 	    return result;
 	}
 	
-	private void buildDawg(List<Map.Entry<String, Integer>> keyset, DawgBuilder dawg) {
+	public void writeTo(OutputStream out) throws IOException {
+		byte[] buf = new byte[4];
+		for (int i = 0; i < units.size(); i++) {
+			int value = units.get(i);
+			buf[0] = (byte)(value & 0xFF);
+			buf[1] = (byte)((value >> 8) & 0xFF);
+			buf[2] = (byte)((value >> 16) & 0xFF);
+			buf[3] = (byte)((value >> 24) & 0xFF);
+			out.write(buf);
+		}
+	}
+	
+	public void clear() {
+		units.clear();
+		extras.clear();
+		labels.clear();
+		table.clear();
+		extrasHead = 0;
+	}
+	
+	private void buildDawg(DawgBuilder dawg) {
+		TreeMap<byte[], Integer> map = new TreeMap<>((x, y) -> {
+			int min = Math.min(x.length, y.length);
+	        for (int i = 0; i < min; i++) {
+	          int result = (x[i] & 0xFF) - (y[i] & 0xFF);
+	          if (result != 0) {
+	            return result;
+	          }
+	        }
+	        return x.length - y.length;
+		});
+		map.putAll(keyset);
+		
 		dawg.init();
-		for (Map.Entry<String, Integer> entry : keyset) {
+		for (Map.Entry<byte[], Integer> entry : map.entrySet()) {
 			dawg.insert(entry.getKey(), entry.getValue());
 		}
 		dawg.finish();
@@ -65,7 +112,7 @@ public class DoubleArrayBuilder {
 		fixAllBlocks();
 
 		extras.clear();
-		labels.setLength(0);
+		labels.clear();
 		table.clear();
 	}
 	
@@ -92,7 +139,7 @@ public class DoubleArrayBuilder {
 		}
 
 		do {
-			char child_label = dawg.label(dawg_child_id);
+			int child_label = dawg.label(dawg_child_id);
 			int dic_child_id = offset ^ child_label;
 			if (child_label != '\0') {
 				buildFromDawg(dawg, dawg_child_id, dic_child_id);
@@ -103,11 +150,11 @@ public class DoubleArrayBuilder {
 
 	private int arrange_from_dawg(DawgBuilder dawg,
 			int dawg_id, int dic_id) {
-		labels.setLength(0);
+		labels.clear();
 
 		int dawg_child_id = dawg.child(dawg_id);
 		while (dawg_child_id != 0) {
-			labels.append(dawg.label(dawg_child_id));
+			labels.add(dawg.label(dawg_child_id));
 			dawg_child_id = dawg.sibling(dawg_child_id);
 		}
 
@@ -115,15 +162,15 @@ public class DoubleArrayBuilder {
 		units.setOffset(dic_id, dic_id ^ offset);
 
 		dawg_child_id = dawg.child(dawg_id);
-		for (int i = 0; i < labels.length(); ++i) {
-			int dic_child_id = offset ^ labels.charAt(i);
+		for (int i = 0; i < labels.size(); ++i) {
+			int dic_child_id = offset ^ labels.get(i);
 			reserveId(dic_child_id);
 
 			if (dawg.isLeaf(dawg_child_id)) {
 				units.setHasLeaf(dic_id, true);
 				units.setValue(dic_child_id, dawg.value(dawg_child_id));
 			} else {
-				units.setLabel(dic_child_id, labels.charAt(i));
+				units.setLabel(dic_child_id, labels.get(i));
 			}
 
 			dawg_child_id = dawg.sibling(dawg_child_id);
@@ -140,7 +187,7 @@ public class DoubleArrayBuilder {
 
 		int unfixed_id = extrasHead;
 		do {
-			int offset = unfixed_id ^ labels.charAt(0);
+			int offset = unfixed_id ^ labels.get(0);
 			if (isValidOffset(id, offset)) {
 				return offset;
 			}
@@ -160,8 +207,8 @@ public class DoubleArrayBuilder {
 			return false;
 		}
 
-		for (int i = 1; i < labels.length(); ++i) {
-			if (extras.isFixed(offset ^ labels.charAt(i))) {
+		for (int i = 1; i < labels.size(); ++i) {
+			if (extras.isFixed(offset ^ labels.get(i))) {
 				return false;
 			}
 		}
@@ -239,7 +286,7 @@ public class DoubleArrayBuilder {
 		for (int id = begin; id != end; ++id) {
 			if (!extras.isFixed(id)) {
 				reserveId(id);
-				units.setLabel(id, (char)(id ^ unused_offset));
+				units.setLabel(id, id ^ unused_offset);
 			}
 		}
 	}
@@ -254,13 +301,5 @@ public class DoubleArrayBuilder {
 		for (int block_id = begin; block_id != end; ++block_id) {
 			fixBlock(block_id);
 		}
-	}
-	
-	public void clear() {
-		units.clear();
-		extras.clear();
-		labels.setLength(0);
-		table.clear();
-		extrasHead = 0;
 	}
 }
