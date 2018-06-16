@@ -4,7 +4,7 @@ apply plugin: 'signing'
 
 group = 'net.arnx'
 archivesBaseName = 'darts-clone-java'
-version = '0.0.1'
+version = '0.8.0'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
