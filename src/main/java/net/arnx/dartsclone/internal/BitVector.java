@@ -69,7 +69,7 @@ public class BitVector {
 	
 	public void build() {
 		ranks.clear();
-		ranks.resize(units.size(), 0);
+		ranks.resize(units.size());
 
 		numOnes = 0;
 		for (int i = 0; i < units.size(); ++i) {

@@ -1,7 +1,5 @@
 package net.arnx.dartsclone.internal;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Collections;
 import java.util.List;
 import net.arnx.dartsclone.util.IntList;
@@ -22,9 +20,11 @@ public class DoubleArrayBuilder {
 	public int[] build(List<DoubleArrayEntry> keyset) {
 		DawgBuilder dawg = new DawgBuilder();
 	    buildDawg(keyset, dawg);
-	    System.out.println("J: { " + dawg.toString() + " }");
+	    dawg.dump();
 	    buildFromDawg(dawg);
 	    dawg.clear();
+	    
+	    this.dump();
 	    
 	    return units.toArray();
 	}
@@ -35,6 +35,23 @@ public class DoubleArrayBuilder {
 		labels.clear();
 		table.clear();
 		extrasHead = 0;
+	}
+	
+	public void dump() {
+		System.out.print("DoubleArrayBuilder.java: { ");
+		System.out.print("units: " + units.list.toHexString() + ", ");
+		/*
+		System.out.print("extras: { ");
+		System.out.print("prevs: " + extras.prevs.toHexString() + ", ");
+		System.out.print("nexts: " + extras.nexts.toHexString() + ", ");
+		System.out.print("isFixeds: " + extras.isFixeds.toBinaryString() + ", ");
+		System.out.print("isUseds: " + extras.isUseds.toBinaryString() + " ");
+		System.out.print("},");
+		*/
+		System.out.print("labels: " + labels.toHexString() + ", ");
+		System.out.print("table: " + table.toHexString() + ", ");
+		System.out.print("extrasHead: " + extrasHead + " ");
+		System.out.println("}");
 	}
 	
 	private void buildDawg(List<DoubleArrayEntry> keyset, DawgBuilder dawg) {
@@ -59,29 +76,28 @@ public class DoubleArrayBuilder {
 	}
 	
 	private void buildFromDawg(DawgBuilder dawg) {
-		int num_units = 1;
-		while (num_units < dawg.size()) {
-			num_units <<= 1;
-		}
-		units.resize(num_units, 0);
+	    this.dump();
 
 		table.clear();
-		table.resize(dawg.numIntersections(), 0);
 		for (int i = 0; i < dawg.numIntersections(); i++) {
-			table.set(i, 0);
+			table.add(0);
 		}
 
 		extras.clear();
-		extras.resize(NUM_EXTRAS, 0, 0, false, false);
+		extras.resize(NUM_EXTRAS);
 
 		reserveId(0);
 		extras.setIsUsed(0, true);
 		units.setOffset(0, 1);
 		units.setLabel(0, '\0');
+		
+	    this.dump();
 
 		if (dawg.child(dawg.root()) != 0) {
 			buildFromDawg(dawg, dawg.root(), 0);
 		}
+		
+	    this.dump();
 
 		fixAllBlocks();
 
@@ -136,14 +152,14 @@ public class DoubleArrayBuilder {
 
 		dawgChildId = dawg.child(dawgId);
 		for (int i = 0; i < labels.size(); i++) {
-			int dic_child_id = offset ^ labels.get(i);
-			reserveId(dic_child_id);
+			int dicChildId = offset ^ labels.get(i);
+			reserveId(dicChildId);
 
 			if (dawg.isLeaf(dawgChildId)) {
 				units.setHasLeaf(dicId, true);
-				units.setValue(dic_child_id, dawg.value(dawgChildId));
+				units.setValue(dicChildId, dawg.value(dawgChildId));
 			} else {
-				units.setLabel(dic_child_id, labels.get(i));
+				units.setLabel(dicChildId, labels.get(i));
 			}
 
 			dawgChildId = dawg.sibling(dawgChildId);
@@ -216,7 +232,7 @@ public class DoubleArrayBuilder {
 			fixBlock(srcNumlocks - NUM_EXTRA_BLOCKS);
 		}
 
-		units.resize(destNumUnits, 0);
+		units.resize(destNumUnits);
 
 		if (destNumBlocks > NUM_EXTRA_BLOCKS) {
 			for (int id = srcNumUnits; id < destNumUnits; id++) {

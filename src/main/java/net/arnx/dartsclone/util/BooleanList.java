@@ -20,19 +20,10 @@ public class BooleanList {
 		}
 	}
 	
-	public void resize(int newSize, boolean defaultValue) {
-		if (size > newSize) {
+	public void resize(int newSize) {
+		if (size != newSize) {
 			buf = Arrays.copyOf(buf, (newSize + (64 - 1)) / 64);
 			size = newSize;
-		} else if (size < newSize) {
-			buf = Arrays.copyOf(buf, (newSize + (64 - 1)) / 64);
-			size = newSize;
-			
-			if (defaultValue) {
-				for (int i = size; i < newSize; i++) {
-					set(i, true);
-				}
-			}
 		}
 	}
 	

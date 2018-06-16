@@ -3,12 +3,7 @@ package net.arnx.dartsclone.internal;
 import net.arnx.dartsclone.util.IntList;
 
 public class DawgUnitList {
-	private IntList list = new IntList();
-	
-	@Override
-	public String toString() {
-		return list.toHexString();
-	}
+	IntList list = new IntList();
 	
 	public void add(int unit) {
 		list.add(unit);

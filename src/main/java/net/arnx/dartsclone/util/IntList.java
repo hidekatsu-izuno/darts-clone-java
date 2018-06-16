@@ -53,15 +53,9 @@ public class IntList {
 		throw new ArrayIndexOutOfBoundsException();
 	}
 	
-	public void resize(int newSize, int defaultValue) {
-		if (size > newSize) {
+	public void resize(int newSize) {
+		if (size != newSize) {
 			buf = Arrays.copyOf(buf, newSize);
-			size = newSize;
-		} else if (size < newSize) {
-			buf = Arrays.copyOf(buf, newSize);
-			if (defaultValue != 0) {
-				Arrays.fill(buf, size, newSize, defaultValue);
-			}
 			size = newSize;
 		}
 	}

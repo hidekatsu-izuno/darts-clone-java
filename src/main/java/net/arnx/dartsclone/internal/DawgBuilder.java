@@ -24,18 +24,28 @@ public class DawgBuilder {
 	IntList recycleBin = new IntList();
 	int numStates;
 	
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("nodes: { ").append(nodes.toString()).append(" }, ");
-		sb.append("units: ").append(units.toString()).append(", ");
-		sb.append("labels: ").append(labels.toHexString()).append(", ");
-		sb.append("isIntersections: { ").append(isIntersections.toString()).append(" }, ");
-		sb.append("table: ").append(table.toHexString()).append(", ");
-		sb.append("nodeStack: ").append(nodeStack.toHexString()).append(", ");
-		sb.append("recycleBin: ").append(recycleBin.toHexString()).append(", ");
-		sb.append("numStates: ").append(numStates);
-		return sb.toString();
+	public void dump() {
+		System.out.print("DawgBuilder.java: { ");
+		System.out.print("nodes: { ");
+		System.out.print("childs: " + nodes.childs.toHexString() + ", ");
+		System.out.print("siblings: " + nodes.siblings.toHexString() + ", ");
+		System.out.print("labels: " + nodes.labels.toHexString() + ", ");
+		System.out.print("isStates: " + nodes.isStates.toBinaryString() + ", ");
+		System.out.print("hasSiblings: " + nodes.hasSiblings.toBinaryString() + " ");
+		System.out.print("}, ");
+		System.out.print("units: " + units.list.toHexString() +", ");
+		System.out.print("labels: " + labels.toHexString() + ", ");
+		System.out.print("isIntersections: { ");
+		System.out.print("units: " + isIntersections.units.toHexString() + ", ");
+		System.out.print("ranks: " + isIntersections.ranks.toHexString() + ", ");
+		System.out.print("numOnes: " + isIntersections.numOnes + ", ");
+		System.out.print("size: " + isIntersections.size + " ");
+		System.out.print("}, ");
+		System.out.print("table: " + table.toHexString() + ", ");
+		System.out.print("nodeStack: " + nodeStack.toHexString() + ", ");
+		System.out.print("recycleBin: " + recycleBin.toHexString() + ", ");
+		System.out.print("numStates: " + numStates + " ");
+		System.out.println("}");
 	}
 	
 	public int root() {
@@ -79,7 +89,7 @@ public class DawgBuilder {
 	}
 	  
 	public void init() {
-		table.resize(INITIAL_TABLE_SIZE, 0);
+		table.resize(INITIAL_TABLE_SIZE);
 
 		appendNode();
 		appendUnit();
@@ -235,7 +245,7 @@ public class DawgBuilder {
 	private void expandTable() {
 		int tableSize = table.size() << 1;
 		table.clear();
-		table.resize(tableSize, 0);
+		table.resize(tableSize);
 
 		for (int i = 1; i < units.size(); i++) {
 			int id = i;

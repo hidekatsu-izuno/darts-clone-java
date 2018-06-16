@@ -10,17 +10,6 @@ public class DawgNodeList {
 	BooleanList isStates;
 	BooleanList hasSiblings;
 	
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("childs: ").append(childs.toHexString()).append(", ");
-		sb.append("siblings: ").append(siblings.toHexString()).append(", ");
-		sb.append("labels: ").append(labels.toHexString()).append(", ");
-		sb.append("isStates: ").append(isStates.toBinaryString()).append(", ");
-		sb.append("hasSiblings: ").append(hasSiblings.toBinaryString());
-		return sb.toString();
-	}
-	
 	public DawgNodeList() {
 		childs = new IntList();
 		siblings = new IntList();

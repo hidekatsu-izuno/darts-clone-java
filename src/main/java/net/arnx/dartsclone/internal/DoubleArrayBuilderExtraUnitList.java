@@ -4,16 +4,16 @@ import net.arnx.dartsclone.util.BooleanList;
 import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayBuilderExtraUnitList {
-	private IntList prevs = new IntList();
-	private IntList nexts = new IntList();
-	private BooleanList isFixeds = new BooleanList();
-	private BooleanList isUseds = new BooleanList();
+	IntList prevs = new IntList();
+	IntList nexts = new IntList();
+	BooleanList isFixeds = new BooleanList();
+	BooleanList isUseds = new BooleanList();
 	
-	public void resize(int newSize, int prev, int next, boolean isFixed, boolean isUsed) {
-		prevs.resize(newSize, prev);
-		nexts.resize(newSize, next);
-		isFixeds.resize(newSize, isFixed);
-		isUseds.resize(newSize, isUsed);
+	public void resize(int newSize) {
+		prevs.resize(newSize);
+		nexts.resize(newSize);
+		isFixeds.resize(newSize);
+		isUseds.resize(newSize);
 	}
 	
 	public void clear() {

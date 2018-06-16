@@ -9,8 +9,8 @@ public class DoubleArrayBuilderUnitList {
 		return list.toArray();
 	}
 	
-	public void resize(int newSize, int defaultValue) {
-		list.resize(newSize, defaultValue);
+	public void resize(int newSize) {
+		list.resize(newSize);
 	}
 	
 	public int get(int index) {
