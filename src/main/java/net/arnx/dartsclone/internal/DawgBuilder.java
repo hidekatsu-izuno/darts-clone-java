@@ -20,6 +20,7 @@ import net.arnx.dartsclone.util.IntList;
 
 public class DawgBuilder {
 	private static final int INITIAL_TABLE_SIZE = 1 << 10;
+	private static final int IS_UNIT_SIZE = 32 * 8;
 	
 	private static int hash(int key) {
 		key = ~key + (key << 15);
@@ -39,7 +40,12 @@ public class DawgBuilder {
 	
 	IntList units = new IntList();
 	IntList labels = new IntList();
-	BitVector isIntersections = new BitVector();
+	
+	IntList isIntersectionUnits = new IntList();
+	IntList isIntersectionRanks = new IntList();
+	int isIntersectionNumOnes;
+	int isIntersectionSize;
+
 	IntList table = new IntList();
 	IntList nodeStack = new IntList();
 	IntList recycleBin = new IntList();
@@ -57,10 +63,10 @@ public class DawgBuilder {
 		System.out.print("units: " + units.toHexString() +", ");
 		System.out.print("labels: " + labels.toHexString() + ", ");
 		System.out.print("isIntersections: { ");
-		System.out.print("units: " + isIntersections.units.toHexString() + ", ");
-		System.out.print("ranks: " + isIntersections.ranks.toHexString() + ", ");
-		System.out.print("numOnes: " + isIntersections.numOnes + ", ");
-		System.out.print("size: " + isIntersections.size + " ");
+		System.out.print("units: " + isIntersectionUnits.toHexString() + ", ");
+		System.out.print("ranks: " + isIntersectionRanks.toHexString() + ", ");
+		System.out.print("numOnes: " + isIntersectionNumOnes + ", ");
+		System.out.print("size: " + isIntersectionSize + " ");
 		System.out.print("}, ");
 		System.out.print("table: " + table.toHexString() + ", ");
 		System.out.print("nodeStack: " + nodeStack.toHexString() + ", ");
@@ -102,15 +108,18 @@ public class DawgBuilder {
 	}
 
 	public boolean isIntersection(int id) {
-		return isIntersections.get(id);
+		return (isIntersectionUnits.get(id / IS_UNIT_SIZE) >> (id % IS_UNIT_SIZE) & 1) == 1;
 	}
 	
 	public int intersectionId(int id) {
-		return isIntersections.rank(id) - 1;
+		int unitId = id / IS_UNIT_SIZE;
+		int rank = isIntersectionRanks.get(unitId) 
+				+ popCount(isIntersectionUnits.get(unitId) & (~0 >> (IS_UNIT_SIZE - (id % IS_UNIT_SIZE) - 1)));
+		return rank - 1;
 	}
 	
 	public int numIntersections() {
-		return isIntersections.numOnes();
+		return isIntersectionNumOnes;
 	}
 
 	public int size() {
@@ -145,7 +154,14 @@ public class DawgBuilder {
 		nodeStack.clear();
 		recycleBin.clear();
 
-		isIntersections.build();
+		isIntersectionRanks.clear();
+		isIntersectionRanks.resize(isIntersectionUnits.size());
+
+		isIntersectionNumOnes = 0;
+		for (int i = 0; i < isIntersectionUnits.size(); ++i) {
+			isIntersectionRanks.set(i, isIntersectionNumOnes);
+			isIntersectionNumOnes += popCount(isIntersectionUnits.get(i));
+		}
 	}
 	
 	public void insert(byte[] key, int value) {
@@ -210,7 +226,11 @@ public class DawgBuilder {
 		
 		units.clear();
 		labels.clear();
-		isIntersections.clear();
+		
+		isIntersectionUnits.clear();
+		isIntersectionRanks.clear();
+		isIntersectionSize = 0;
+		
 		table.clear();
 		nodeStack.clear();
 		recycleBin.clear();
@@ -239,11 +259,15 @@ public class DawgBuilder {
 	}
 	
 	private int appendUnit() {
-		isIntersections.add();
+		if ((isIntersectionSize % IS_UNIT_SIZE) == 0) {
+			isIntersectionUnits.add(0);
+		}
+		isIntersectionSize++;
+		
 		units.add(0);
 		labels.add(0);
 
-		return isIntersections.size() - 1;
+		return isIntersectionSize - 1;
 	}
 	
 	private void flush(int id) {
@@ -263,7 +287,8 @@ public class DawgBuilder {
 			int[] hashId = new int[1];
 			int matchId = findNode(nodeId, hashId);
 			if (matchId != 0) {
-				isIntersections.set(matchId, true);
+				int unit = isIntersectionUnits.get(matchId / IS_UNIT_SIZE);
+				isIntersectionUnits.set(matchId / IS_UNIT_SIZE, unit | (1 << (matchId % IS_UNIT_SIZE)));
 			} else {
 				int unitId = 0;
 				for (int i = 0; i < numSiblings; i++) {
@@ -386,5 +411,14 @@ public class DawgBuilder {
 			return (nodeChilds.get(index) << 1) | (hasNodeSiblings.get(index) ? 1 : 0);
 		}
 		return (nodeChilds.get(index) << 2) | (isNodeStates.get(index) ? 2 : 0) | (hasNodeSiblings.get(index) ? 1 : 0);
+	}
+	
+	private static int popCount(int unit) {
+		unit = ((unit & 0xAAAAAAAA) >> 1) + (unit & 0x55555555);
+		unit = ((unit & 0xCCCCCCCC) >> 2) + (unit & 0x33333333);
+		unit = ((unit >> 4) + unit) & 0x0F0F0F0F;
+		unit += unit >> 8;
+		unit += unit >> 16;
+		return unit & 0xFF;
 	}
 }
