@@ -55,7 +55,7 @@ public class BitVector {
 		if ((size % UNIT_SIZE) == 0) {
 			units.add(0);
 		}
-		++size;
+		size++;
 	}
 	
 	public void build() {

@@ -41,7 +41,7 @@ public class DawgBuilder {
 	}
 
 	public boolean isLeaf(int id) {
-		return label(id) == '\0';
+		return label(id) == 0;
 	}
 	
 	public int label(int id) {
@@ -72,7 +72,7 @@ public class DawgBuilder {
 
 		numStates = 1;
 
-		nodes.setLabel(0, '\u00FF');
+		nodes.setLabel(0, 0xFF);
 		nodeStack.add(0);
 	}
 	
@@ -98,47 +98,47 @@ public class DawgBuilder {
 		}
 
 		int id = 0;
-		int key_pos = 0;
+		int keyPos = 0;
 
-		for ( ; key_pos <= key.length; ++key_pos) {
-			int child_id = nodes.child(id);
-			if (child_id == 0) {
+		for ( ; keyPos <= key.length; keyPos++) {
+			int childId = nodes.child(id);
+			if (childId == 0) {
 				break;
 			}
 
-			int key_label = key[key_pos] & 0xFF;
-			if (key_pos < key.length && key_label == 0) {
+			int keyLabel = key[keyPos] & 0xFF;
+			if (keyPos < key.length && keyLabel == 0) {
 				throw new IllegalStateException("failed to insert key: invalid null character");
 			}
 
-			int unit_label = nodes.label(child_id);
-			if (key_label < unit_label) {
+			int unitLabel = nodes.label(childId);
+			if (keyLabel < unitLabel) {
 				throw new IllegalStateException("failed to insert key: wrong key order");
-			} else if (key_label > unit_label) {
-				nodes.setHasSibling(child_id, true);
-				flush(child_id);
+			} else if (keyLabel > unitLabel) {
+				nodes.setHasSibling(childId, true);
+				flush(childId);
 				break;
 			}
-			id = child_id;
+			id = childId;
 		}
 
-		if (key_pos > key.length) {
+		if (keyPos > key.length) {
 			return;
 		}
 
-		for ( ; key_pos <= key.length; ++key_pos) {
-			int key_label = (key_pos < key.length) ? (key[key_pos] & 0xFF) : 0;
-			int child_id = appendNode();
+		for ( ; keyPos <= key.length; keyPos++) {
+			int keyLabel = (keyPos < key.length) ? (key[keyPos] & 0xFF) : 0;
+			int childId = appendNode();
 
 			if (nodes.child(id) == 0) {
-				nodes.setIsState(child_id, true);
+				nodes.setIsState(childId, true);
 			}
-			nodes.setSibling(child_id, nodes.child(id));
-			nodes.setLabel(child_id, key_label);
-			nodes.setChild(id, child_id);
-			nodeStack.add(child_id);
+			nodes.setSibling(childId, nodes.child(id));
+			nodes.setLabel(childId, keyLabel);
+			nodes.setChild(id, childId);
+			nodeStack.add(childId);
 
-			id = child_id;
+			id = childId;
 		}
 		nodes.setValue(id, value);
 	}
@@ -158,10 +158,10 @@ public class DawgBuilder {
 		int id;
 		if (recycleBin.isEmpty()) {
 			id = nodes.size();
-			nodes.add(0, 0, '\0', false, false);
+			nodes.add(0, 0, 0, false, false);
 		} else {
 			id = recycleBin.get(recycleBin.size() - 1);
-			nodes.set(id, 0, 0, '\0', false, false);
+			nodes.set(id, 0, 0, 0, false, false);
 			recycleBin.remove(recycleBin.size() - 1);
 		}
 		return id;
@@ -177,67 +177,67 @@ public class DawgBuilder {
 	
 	private void flush(int id) {
 		while (nodeStack.get(nodeStack.size() - 1) != id) {
-			int node_id = nodeStack.get(nodeStack.size() - 1);
+			int nodeId = nodeStack.get(nodeStack.size() - 1);
 			nodeStack.remove(nodeStack.size() - 1);
 
 			if (numStates >= table.size() - (table.size() >> 2)) {
 				expandTable();
 			}
 
-			int num_siblings = 0;
-			for (int i = node_id; i != 0; i = nodes.sibling(i)) {
-				++num_siblings;
+			int numSiblings = 0;
+			for (int i = nodeId; i != 0; i = nodes.sibling(i)) {
+				numSiblings++;
 			}
 
-			int[] hash_id = new int[1];
-			int match_id = find_node(node_id, hash_id);
-			if (match_id != 0) {
-				isIntersections.set(match_id, true);
+			int[] hashId = new int[1];
+			int matchId = findNode(nodeId, hashId);
+			if (matchId != 0) {
+				isIntersections.set(matchId, true);
 			} else {
-				int unit_id = 0;
-				for (int i = 0; i < num_siblings; ++i) {
-					unit_id = appendUnit();
+				int unitId = 0;
+				for (int i = 0; i < numSiblings; i++) {
+					unitId = appendUnit();
 				}
-				for (int i = node_id; i != 0; i = nodes.sibling(i)) {
-					units.set(unit_id, nodes.unit(i));
-					labels.set(unit_id, nodes.label(i));
-					--unit_id;
+				for (int i = nodeId; i != 0; i = nodes.sibling(i)) {
+					units.set(unitId, nodes.unit(i));
+					labels.set(unitId, nodes.label(i));
+					unitId--;
 				}
-				match_id = unit_id + 1;
-				table.set(hash_id[0], match_id);
-				++numStates;
+				matchId = unitId + 1;
+				table.set(hashId[0], matchId);
+				numStates++;
 			}
 
-			for (int i = node_id, next; i != 0; i = next) {
+			for (int i = nodeId, next; i != 0; i = next) {
 				next = nodes.sibling(i);
-				free_node(i);
+				freeNode(i);
 			}
 
-			nodes.setChild(nodeStack.get(nodeStack.size() - 1), match_id);
+			nodes.setChild(nodeStack.get(nodeStack.size() - 1), matchId);
 		}
 		nodeStack.remove(nodeStack.size() - 1);
 	}
 
 	private void expandTable() {
-		int table_size = table.size() << 1;
+		int tableSize = table.size() << 1;
 		table.clear();
-		table.resize(table_size, 0);
+		table.resize(tableSize, 0);
 
-		for (int i = 1; i < units.size(); ++i) {
+		for (int i = 1; i < units.size(); i++) {
 			int id = i;
 			if (labels.get(id) == 0 || units.isState(id)) {
-				int[] hash_id = new int[1];
-				find_unit(id, hash_id);
-				table.set(hash_id[0], id);
+				int[] hashId = new int[1];
+				findUnit(id, hashId);
+				table.set(hashId[0], id);
 			}
 		}
 	}
 	
-	private int find_unit(int id, int[] hash_id) {
-		hash_id[0] = hash_unit(id) % table.size();
-		for ( ; ; hash_id[0] = (hash_id[0] + 1) % table.size()) {
-			int unit_id = table.get(hash_id[0]);
-			if (unit_id == 0) {
+	private int findUnit(int id, int[] hashId) {
+		hashId[0] = hashUnit(id) % table.size();
+		for ( ; ; hashId[0] = (hashId[0] + 1) % table.size()) {
+			int unitId = table.get(hashId[0]);
+			if (unitId == 0) {
 				break;
 			}
 
@@ -246,67 +246,67 @@ public class DawgBuilder {
 		return 0;
 	}
 
-	private int find_node(int node_id, int[] hash_id) {
-		hash_id[0] = hash_node(node_id) % table.size();
-		for ( ; ; hash_id[0] = (hash_id[0] + 1) % table.size()) {
-			int unit_id = table.get(hash_id[0]);
+	private int findNode(int nodeId, int[] hashId) {
+		hashId[0] = hashNode(nodeId) % table.size();
+		for ( ; ; hashId[0] = (hashId[0] + 1) % table.size()) {
+			int unit_id = table.get(hashId[0]);
 			if (unit_id == 0) {
 				break;
 			}
 
-			if (are_equal(node_id, unit_id)) {
+			if (areEqual(nodeId, unit_id)) {
 				return unit_id;
 			}
 		}
 		return 0;
 	}
 	
-	private void free_node(int id) {
+	private void freeNode(int id) {
 		recycleBin.add(id);
 	}
 	
-	private boolean are_equal(int node_id, int unit_id) {
-		for (int i = nodes.sibling(node_id); i != 0;
+	private boolean areEqual(int nodeId, int unitId) {
+		for (int i = nodes.sibling(nodeId); i != 0;
 				i = nodes.sibling(i)) {
-			if (units.hasSibling(unit_id) == false) {
+			if (!units.hasSibling(unitId)) {
 				return false;
 			}
-			++unit_id;
+			unitId++;
 		}
-		if (units.hasSibling(unit_id) == true) {
+		if (units.hasSibling(unitId)) {
 			return false;
 		}
 
-		for (int i = node_id; i != 0; i = nodes.sibling(i), --unit_id) {
-			if (nodes.unit(i) != units.unit(unit_id) ||
-					nodes.label(i) != labels.get(unit_id)) {
+		for (int i = nodeId; i != 0; i = nodes.sibling(i), unitId--) {
+			if (nodes.unit(i) != units.unit(unitId) ||
+					nodes.label(i) != labels.get(unitId)) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	private int hash_unit(int id) {
-		int hash_value = 0;
+	private int hashUnit(int id) {
+		int hashValue = 0;
 		for ( ; id != 0; ++id) {
 			int unit = units.unit(id);
 			int label = labels.get(id);
-			hash_value ^= hash((label << 24) ^ unit);
+			hashValue ^= hash((label << 24) ^ unit);
 
-			if (units.hasSibling(id) == false) {
+			if (!units.hasSibling(id)) {
 				break;
 			}
 		}
-		return hash_value;
+		return hashValue;
 	}
 	
-	private int hash_node(int id) {
-		int hash_value = 0;
+	private int hashNode(int id) {
+		int hashValue = 0;
 		for ( ; id != 0; id = nodes.sibling(id)) {
 			int unit = nodes.unit(id);
 			int label = nodes.label(id);
-			hash_value ^= hash((label << 24) ^ unit);
+			hashValue ^= hash((label << 24) ^ unit);
 		}
-		return hash_value;
+		return hashValue;
 	}
 }

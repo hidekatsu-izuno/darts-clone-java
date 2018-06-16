@@ -89,7 +89,7 @@ public class DoubleArrayBuilder {
 
 		table.clear();
 		table.resize(dawg.numIntersections(), 0);
-		for (int i = 0; i < dawg.numIntersections(); ++i) {
+		for (int i = 0; i < dawg.numIntersections(); i++) {
 			table.set(i, 0);
 		}
 
@@ -112,71 +112,70 @@ public class DoubleArrayBuilder {
 		table.clear();
 	}
 	
-	private void buildFromDawg(DawgBuilder dawg, int dawg_id, int dic_id) {
-		int dawg_child_id = dawg.child(dawg_id);
-		if (dawg.isIntersection(dawg_child_id)) {
-			int intersection_id = dawg.intersectionId(dawg_child_id);
+	private void buildFromDawg(DawgBuilder dawg, int dawgId, int dicId) {
+		int dawgChildId = dawg.child(dawgId);
+		if (dawg.isIntersection(dawgChildId)) {
+			int intersection_id = dawg.intersectionId(dawgChildId);
 			int offset = table.get(intersection_id);
 			if (offset != 0) {
-				offset ^= dic_id;
+				offset ^= dicId;
 				if ((offset & UPPER_MASK) == 0 || (offset & LOWER_MASK) == 0) {
-					if (dawg.isLeaf(dawg_child_id)) {
-						units.setHasLeaf(dic_id, true);
+					if (dawg.isLeaf(dawgChildId)) {
+						units.setHasLeaf(dicId, true);
 					}
-					units.setOffset(dic_id, offset);
+					units.setOffset(dicId, offset);
 					return;
 				}
 			}
 		}
 
-		int offset = arrange_from_dawg(dawg, dawg_id, dic_id);
-		if (dawg.isIntersection(dawg_child_id)) {
-			table.set(dawg.intersectionId(dawg_child_id), offset);
+		int offset = arrangeFromDawg(dawg, dawgId, dicId);
+		if (dawg.isIntersection(dawgChildId)) {
+			table.set(dawg.intersectionId(dawgChildId), offset);
 		}
 
 		do {
-			int child_label = dawg.label(dawg_child_id);
+			int child_label = dawg.label(dawgChildId);
 			int dic_child_id = offset ^ child_label;
 			if (child_label != '\0') {
-				buildFromDawg(dawg, dawg_child_id, dic_child_id);
+				buildFromDawg(dawg, dawgChildId, dic_child_id);
 			}
-			dawg_child_id = dawg.sibling(dawg_child_id);
-		} while (dawg_child_id != 0);
+			dawgChildId = dawg.sibling(dawgChildId);
+		} while (dawgChildId != 0);
 	}
 
-	private int arrange_from_dawg(DawgBuilder dawg,
-			int dawg_id, int dic_id) {
+	private int arrangeFromDawg(DawgBuilder dawg, int dawgId, int dicId) {
 		labels.clear();
 
-		int dawg_child_id = dawg.child(dawg_id);
-		while (dawg_child_id != 0) {
-			labels.add(dawg.label(dawg_child_id));
-			dawg_child_id = dawg.sibling(dawg_child_id);
+		int dawgChildId = dawg.child(dawgId);
+		while (dawgChildId != 0) {
+			labels.add(dawg.label(dawgChildId));
+			dawgChildId = dawg.sibling(dawgChildId);
 		}
 
-		int offset = find_valid_offset(dic_id);
-		units.setOffset(dic_id, dic_id ^ offset);
+		int offset = findValidOffset(dicId);
+		units.setOffset(dicId, dicId ^ offset);
 
-		dawg_child_id = dawg.child(dawg_id);
-		for (int i = 0; i < labels.size(); ++i) {
+		dawgChildId = dawg.child(dawgId);
+		for (int i = 0; i < labels.size(); i++) {
 			int dic_child_id = offset ^ labels.get(i);
 			reserveId(dic_child_id);
 
-			if (dawg.isLeaf(dawg_child_id)) {
-				units.setHasLeaf(dic_id, true);
-				units.setValue(dic_child_id, dawg.value(dawg_child_id));
+			if (dawg.isLeaf(dawgChildId)) {
+				units.setHasLeaf(dicId, true);
+				units.setValue(dic_child_id, dawg.value(dawgChildId));
 			} else {
 				units.setLabel(dic_child_id, labels.get(i));
 			}
 
-			dawg_child_id = dawg.sibling(dawg_child_id);
+			dawgChildId = dawg.sibling(dawgChildId);
 		}
 		extras.setIsUsed(offset, true);
 
 		return offset;
 	}
 	
-	private int find_valid_offset(int id) {
+	private int findValidOffset(int id) {
 		if (extrasHead >= units.size()) {
 			return units.size() | (id & LOWER_MASK);
 		}
@@ -203,7 +202,7 @@ public class DoubleArrayBuilder {
 			return false;
 		}
 
-		for (int i = 1; i < labels.size(); ++i) {
+		for (int i = 1; i < labels.size(); i++) {
 			if (extras.isFixed(offset ^ labels.get(i))) {
 				return false;
 			}
@@ -229,38 +228,38 @@ public class DoubleArrayBuilder {
 	}
 	
 	private void expandUnits() {
-		int src_num_units = units.size();
-		int src_num_blocks = numBlocks();
+		int srcNumUnits = units.size();
+		int srcNumlocks = numBlocks();
 
-		int dest_num_units = src_num_units + BLOCK_SIZE;
-		int dest_num_blocks = src_num_blocks + 1;
+		int destNumUnits = srcNumUnits + BLOCK_SIZE;
+		int destNumBlocks = srcNumlocks + 1;
 
-		if (dest_num_blocks > NUM_EXTRA_BLOCKS) {
-			fixBlock(src_num_blocks - NUM_EXTRA_BLOCKS);
+		if (destNumBlocks > NUM_EXTRA_BLOCKS) {
+			fixBlock(srcNumlocks - NUM_EXTRA_BLOCKS);
 		}
 
-		units.resize(dest_num_units, 0);
+		units.resize(destNumUnits, 0);
 
-		if (dest_num_blocks > NUM_EXTRA_BLOCKS) {
-			for (int id = src_num_units; id < dest_num_units; ++id) {
+		if (destNumBlocks > NUM_EXTRA_BLOCKS) {
+			for (int id = srcNumUnits; id < destNumUnits; id++) {
 				extras.setIsUsed(id, false);
 				extras.setIsFixed(id, false);
 			}
 		}
 
-		for (int i = src_num_units + 1; i < dest_num_units; ++i) {
+		for (int i = srcNumUnits + 1; i < destNumUnits; i++) {
 			extras.setNext(i - 1, i);
 			extras.setPrev(i, i - 1);
 		}
 
-		extras.setPrev(src_num_units, dest_num_units - 1);
-		extras.setNext(dest_num_units - 1, src_num_units);
+		extras.setPrev(srcNumUnits, destNumUnits - 1);
+		extras.setNext(destNumUnits - 1, srcNumUnits);
 
-		extras.setPrev(src_num_units, extras.prev(extrasHead));
-		extras.setNext(dest_num_units - 1, extrasHead);
+		extras.setPrev(srcNumUnits, extras.prev(extrasHead));
+		extras.setNext(destNumUnits - 1, extrasHead);
 
-		extras.setNext(extras.prev(extrasHead), src_num_units);
-		extras.setPrev(extrasHead, dest_num_units - 1);
+		extras.setNext(extras.prev(extrasHead), srcNumUnits);
+		extras.setPrev(extrasHead, destNumUnits - 1);
 	}
 	
 	private int numBlocks() {
@@ -271,18 +270,18 @@ public class DoubleArrayBuilder {
 		int begin = blockId * BLOCK_SIZE;
 		int end = begin + BLOCK_SIZE;
 
-		int unused_offset = 0;
-		for (int offset = begin; offset != end; ++offset) {
+		int unusedOffset = 0;
+		for (int offset = begin; offset != end; offset++) {
 			if (!extras.isUsed(offset)) {
-				unused_offset = offset;
+				unusedOffset = offset;
 				break;
 			}
 		}
 
-		for (int id = begin; id != end; ++id) {
+		for (int id = begin; id != end; id++) {
 			if (!extras.isFixed(id)) {
 				reserveId(id);
-				units.setLabel(id, id ^ unused_offset);
+				units.setLabel(id, id ^ unusedOffset);
 			}
 		}
 	}
@@ -294,8 +293,8 @@ public class DoubleArrayBuilder {
 		}
 		int end = numBlocks();
 
-		for (int block_id = begin; block_id != end; ++block_id) {
-			fixBlock(block_id);
+		for (int blockId = begin; blockId != end; blockId++) {
+			fixBlock(blockId);
 		}
 	}
 }
