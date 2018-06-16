@@ -20,9 +20,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import net.arnx.dartsclone.internal.DawgBuilder;
 import net.arnx.dartsclone.internal.DoubleArrayBuilder;
 import net.arnx.dartsclone.internal.DoubleArrayEntry;
 import net.arnx.dartsclone.util.IntList;
@@ -41,8 +43,28 @@ public class DoubleArray {
 		}
 		
 		public DoubleArray build() {
+			Collections.sort(list, (x, y) -> {
+				byte[] xkey = x.key();
+				byte[] ykey = y.key();
+				int min = Math.min(xkey.length, ykey.length);
+		        for (int i = 0; i < min; i++) {
+		          int result = (xkey[i] & 0xFF) - (ykey[i] & 0xFF);
+		          if (result != 0) {
+		            return result;
+		          }
+		        }
+		        return xkey.length - ykey.length;
+			});
+			
+			DawgBuilder dawg = new DawgBuilder();
+			dawg.init();
+			for (DoubleArrayEntry entry : list) {
+				dawg.insert(entry.key(), entry.value());
+			}
+			dawg.finish();
+		    
 			DoubleArrayBuilder builder = new DoubleArrayBuilder();
-			return new DoubleArray(builder.build(list));
+			return new DoubleArray(builder.build(dawg));
 		}
 	}
 
@@ -75,43 +97,46 @@ public class DoubleArray {
 	
 	public int get(byte[] key) {
 		int unit = array[0];
-		int nodePos = 0;
+		int pos = offset(unit);
 		
 		for (int i = 0; i < key.length; i++) {
 			int c = (key[i] & 0xFF);
 			
-			nodePos ^= offset(unit) ^ c;
-			unit = array[nodePos];
-			if (label(unit) != c) {
+			pos ^= c;
+			unit = array[pos];
+			if (label(unit) == c) {
+				pos ^= offset(unit);
+			} else {
 				return -1;
 			}
 		}
 
-		if (!hasLeaf(unit)) {
-			return -1;
-		}
-		
-		return value(array[nodePos ^ offset(unit)]);
+		if (hasLeaf(unit)) {
+			return value(array[pos]);
+		} else {
+			return -1;		
+		}		
 	}
 	
 	public IntStream findByCommonPrefix(byte[] key) {
 		IntStream.Builder builder = IntStream.builder();
 		
 		int unit = array[0];
-		int nodePos = offset(unit);
+		int pos = offset(unit);
 		
 		for (int i = 0; i < key.length; i++) {
 			int c = (key[i] & 0xFF);
 		
-			nodePos ^= c;
-			unit = array[nodePos];
-			if (label(unit) != c) {
-				return builder.build();
+			pos ^= c;
+			unit = array[pos];
+			if (label(unit) == c) {
+				pos ^= offset(unit);
+			} else {
+				break;
 			}
-
-			nodePos ^= offset(unit);
+			
 			if (hasLeaf(unit)) {
-				builder.accept(value(array[nodePos]));
+				builder.accept(value(array[pos]));
 			}
 		}
 		
