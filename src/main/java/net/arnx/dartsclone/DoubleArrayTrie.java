@@ -21,7 +21,9 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import net.arnx.dartsclone.internal.DawgBuilder;
@@ -29,20 +31,22 @@ import net.arnx.dartsclone.internal.DoubleArrayBuilder;
 import net.arnx.dartsclone.internal.DoubleArrayEntry;
 import net.arnx.dartsclone.util.IntList;
 
-public class DoubleArray {
-	public static DoubleArray wrap(int[] array) {
-		return new DoubleArray(array);
+public class DoubleArrayTrie {
+	public static DoubleArrayTrie wrap(int[] array) {
+		return new DoubleArrayTrie(array);
 	}
 	
 	public static class Builder {
-		private List<DoubleArrayEntry> list = new ArrayList<>();
+		private Set<DoubleArrayEntry> keyset = new LinkedHashSet<>();
 		
 		public Builder put(byte[] key, int value) {
-			list.add(new DoubleArrayEntry(key, value));
+			keyset.add(new DoubleArrayEntry(key, value));
 			return this;
 		}
 		
-		public DoubleArray build() {
+		public DoubleArrayTrie build() {
+			List<DoubleArrayEntry> list = new ArrayList<>(keyset);
+			
 			Collections.sort(list, (x, y) -> {
 				byte[] xkey = x.key();
 				byte[] ykey = y.key();
@@ -64,11 +68,11 @@ public class DoubleArray {
 			dawg.finish();
 		    
 			DoubleArrayBuilder builder = new DoubleArrayBuilder();
-			return new DoubleArray(builder.build(dawg));
+			return new DoubleArrayTrie(builder.build(dawg));
 		}
 	}
 
-	public static DoubleArray load(InputStream in) throws IOException {
+	public static DoubleArrayTrie load(InputStream in) throws IOException {
 		IntList list = new IntList();
 
 		int value = 0;
@@ -86,12 +90,12 @@ public class DoubleArray {
 			}
 		}
 		
-		return new DoubleArray(list.toArray());
+		return new DoubleArrayTrie(list.toArray());
 	}
 	
 	private int[] array;
 	
-	private DoubleArray(int[] array) {
+	private DoubleArrayTrie(int[] array) {
 		this.array = array;
 	}
 	
@@ -174,7 +178,7 @@ public class DoubleArray {
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		DoubleArray other = (DoubleArray) obj;
+		DoubleArrayTrie other = (DoubleArrayTrie) obj;
 		if (!Arrays.equals(array, other.array)) {
 			return false;
 		}
