@@ -1,5 +1,6 @@
 package net.arnx.dartsclone.internal;
 
+import net.arnx.dartsclone.util.BooleanList;
 import net.arnx.dartsclone.util.IntList;
 
 public class DawgBuilder {
@@ -15,7 +16,12 @@ public class DawgBuilder {
 		return key;
 	}
 	
-	DawgNodeList nodes = new DawgNodeList();
+	IntList nodeChilds = new IntList();
+	IntList nodeSiblings = new IntList();
+	IntList nodeLabels = new IntList();
+	BooleanList isNodeStates = new BooleanList();
+	BooleanList hasNodeSiblings = new BooleanList();
+	
 	IntList units = new IntList();
 	IntList labels = new IntList();
 	BitVector isIntersections = new BitVector();
@@ -27,11 +33,11 @@ public class DawgBuilder {
 	public void dump() {
 		System.out.print("DawgBuilder.java: { ");
 		System.out.print("nodes: { ");
-		System.out.print("childs: " + nodes.childs.toHexString() + ", ");
-		System.out.print("siblings: " + nodes.siblings.toHexString() + ", ");
-		System.out.print("labels: " + nodes.labels.toHexString() + ", ");
-		System.out.print("isStates: " + nodes.isStates.toBinaryString() + ", ");
-		System.out.print("hasSiblings: " + nodes.hasSiblings.toBinaryString() + " ");
+		System.out.print("childs: " + nodeChilds.toHexString() + ", ");
+		System.out.print("siblings: " + nodeSiblings.toHexString() + ", ");
+		System.out.print("labels: " + nodeLabels.toHexString() + ", ");
+		System.out.print("isStates: " + isNodeStates.toBinaryString() + ", ");
+		System.out.print("hasSiblings: " + hasNodeSiblings.toBinaryString() + " ");
 		System.out.print("}, ");
 		System.out.print("units: " + units.toHexString() +", ");
 		System.out.print("labels: " + labels.toHexString() + ", ");
@@ -104,17 +110,22 @@ public class DawgBuilder {
 
 		numStates = 1;
 
-		nodes.setLabel(0, 0xFF);
+		nodeLabels.set(0, 0xFF);
 		nodeStack.add(0);
 	}
 	
 	public void finish() {
 		flush(0);
 
-		units.set(0, nodes.unit(0));
-		labels.set(0, nodes.label(0));
+		units.set(0, nodeUnit(0));
+		labels.set(0, nodeLabels.get(0));
 
-		nodes.clear();
+		nodeChilds.clear();
+		nodeSiblings.clear();
+		nodeLabels.clear();
+		isNodeStates.clear();
+		hasNodeSiblings.clear();
+		
 		table.clear();
 		nodeStack.clear();
 		recycleBin.clear();
@@ -133,7 +144,7 @@ public class DawgBuilder {
 		int keyPos = 0;
 
 		for ( ; keyPos <= key.length; keyPos++) {
-			int childId = nodes.child(id);
+			int childId = nodeChilds.get(id);
 			if (childId == 0) {
 				break;
 			}
@@ -143,11 +154,11 @@ public class DawgBuilder {
 				throw new IllegalStateException("failed to insert key: invalid null character");
 			}
 
-			int unitLabel = nodes.label(childId);
+			int unitLabel = nodeLabels.get(childId);
 			if (keyLabel < unitLabel) {
 				throw new IllegalStateException("failed to insert key: wrong key order");
 			} else if (keyLabel > unitLabel) {
-				nodes.setHasSibling(childId, true);
+				hasNodeSiblings.set(childId, true);
 				flush(childId);
 				break;
 			}
@@ -162,21 +173,26 @@ public class DawgBuilder {
 			int keyLabel = (keyPos < key.length) ? (key[keyPos] & 0xFF) : 0;
 			int childId = appendNode();
 
-			if (nodes.child(id) == 0) {
-				nodes.setIsState(childId, true);
+			if (nodeChilds.get(id) == 0) {
+				isNodeStates.set(childId, true);
 			}
-			nodes.setSibling(childId, nodes.child(id));
-			nodes.setLabel(childId, keyLabel);
-			nodes.setChild(id, childId);
+			nodeSiblings.set(childId, nodeChilds.get(id));
+			nodeLabels.set(childId, keyLabel);
+			nodeChilds.set(id, childId);
 			nodeStack.add(childId);
 
 			id = childId;
 		}
-		nodes.setValue(id, value);
+		nodeChilds.set(id, value);
 	}
 	
 	public void clear() {
-		nodes.clear();
+		nodeChilds.clear();
+		nodeSiblings.clear();
+		nodeLabels.clear();
+		isNodeStates.clear();
+		hasNodeSiblings.clear();
+		
 		units.clear();
 		labels.clear();
 		isIntersections.clear();
@@ -189,11 +205,19 @@ public class DawgBuilder {
 	private int appendNode() {
 		int id;
 		if (recycleBin.isEmpty()) {
-			id = nodes.size();
-			nodes.add(0, 0, 0, false, false);
+			id = nodeChilds.size();
+			nodeChilds.add(0);
+			nodeSiblings.add(0);
+			nodeLabels.add(0);
+			isNodeStates.add(false);
+			hasNodeSiblings.add(false);
 		} else {
 			id = recycleBin.get(recycleBin.size() - 1);
-			nodes.set(id, 0, 0, 0, false, false);
+			nodeChilds.set(id, 0);
+			nodeSiblings.set(id, 0);
+			nodeLabels.set(id, 0);
+			isNodeStates.set(id, false);
+			hasNodeSiblings.set(id, false);
 			recycleBin.remove(recycleBin.size() - 1);
 		}
 		return id;
@@ -217,7 +241,7 @@ public class DawgBuilder {
 			}
 
 			int numSiblings = 0;
-			for (int i = nodeId; i != 0; i = nodes.sibling(i)) {
+			for (int i = nodeId; i != 0; i = nodeSiblings.get(i)) {
 				numSiblings++;
 			}
 
@@ -230,9 +254,9 @@ public class DawgBuilder {
 				for (int i = 0; i < numSiblings; i++) {
 					unitId = appendUnit();
 				}
-				for (int i = nodeId; i != 0; i = nodes.sibling(i)) {
-					units.set(unitId, nodes.unit(i));
-					labels.set(unitId, nodes.label(i));
+				for (int i = nodeId; i != 0; i = nodeSiblings.get(i)) {
+					units.set(unitId, nodeUnit(i));
+					labels.set(unitId, nodeLabels.get(i));
 					unitId--;
 				}
 				matchId = unitId + 1;
@@ -241,11 +265,11 @@ public class DawgBuilder {
 			}
 
 			for (int i = nodeId, next; i != 0; i = next) {
-				next = nodes.sibling(i);
+				next = nodeSiblings.get(i);
 				freeNode(i);
 			}
 
-			nodes.setChild(nodeStack.get(nodeStack.size() - 1), matchId);
+			nodeChilds.set(nodeStack.get(nodeStack.size() - 1), matchId);
 		}
 		nodeStack.remove(nodeStack.size() - 1);
 	}
@@ -298,8 +322,8 @@ public class DawgBuilder {
 	}
 	
 	private boolean areEqual(int nodeId, int unitId) {
-		for (int i = nodes.sibling(nodeId); i != 0;
-				i = nodes.sibling(i)) {
+		for (int i = nodeSiblings.get(nodeId); i != 0;
+				i = nodeSiblings.get(i)) {
 			if (!hasSibling(unitId)) {
 				return false;
 			}
@@ -309,9 +333,9 @@ public class DawgBuilder {
 			return false;
 		}
 
-		for (int i = nodeId; i != 0; i = nodes.sibling(i), unitId--) {
-			if (nodes.unit(i) != units.get(unitId) ||
-					nodes.label(i) != labels.get(unitId)) {
+		for (int i = nodeId; i != 0; i = nodeSiblings.get(i), unitId--) {
+			if (nodeUnit(i) != units.get(unitId) ||
+					nodeLabels.get(i) != labels.get(unitId)) {
 				return false;
 			}
 		}
@@ -334,11 +358,18 @@ public class DawgBuilder {
 	
 	private int hashNode(int id) {
 		int hashValue = 0;
-		for ( ; id != 0; id = nodes.sibling(id)) {
-			int unit = nodes.unit(id);
-			int label = nodes.label(id);
+		for ( ; id != 0; id = nodeSiblings.get(id)) {
+			int unit = nodeUnit(id);
+			int label = nodeLabels.get(id);
 			hashValue ^= hash((label << 24) ^ unit);
 		}
 		return hashValue;
+	}
+	
+	private int nodeUnit(int index) {
+		if (nodeLabels.get(index) == 0) {
+			return (nodeChilds.get(index) << 1) | (hasNodeSiblings.get(index) ? 1 : 0);
+		}
+		return (nodeChilds.get(index) << 2) | (isNodeStates.get(index) ? 2 : 0) | (hasNodeSiblings.get(index) ? 1 : 0);
 	}
 }
