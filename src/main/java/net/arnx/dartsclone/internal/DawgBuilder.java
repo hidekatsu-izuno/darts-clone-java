@@ -16,7 +16,7 @@ public class DawgBuilder {
 	}
 	
 	DawgNodeList nodes = new DawgNodeList();
-	DawgUnitList units = new DawgUnitList();
+	IntList units = new IntList();
 	IntList labels = new IntList();
 	BitVector isIntersections = new BitVector();
 	IntList table = new IntList();
@@ -33,7 +33,7 @@ public class DawgBuilder {
 		System.out.print("isStates: " + nodes.isStates.toBinaryString() + ", ");
 		System.out.print("hasSiblings: " + nodes.hasSiblings.toBinaryString() + " ");
 		System.out.print("}, ");
-		System.out.print("units: " + units.list.toHexString() +", ");
+		System.out.print("units: " + units.toHexString() +", ");
 		System.out.print("labels: " + labels.toHexString() + ", ");
 		System.out.print("isIntersections: { ");
 		System.out.print("units: " + isIntersections.units.toHexString() + ", ");
@@ -53,15 +53,23 @@ public class DawgBuilder {
 	}
 
 	public int child(int id) {
-		return units.child(id);
+		return units.get(id) >> 2;
 	}
 	
 	public int sibling(int id) {
-		return units.hasSibling(id) ? (id + 1) : 0;
+		return hasSibling(id) ? (id + 1) : 0;
 	}
 	
 	public int value(int id) {
-		return units.value(id);
+		return units.get(id) >> 1;
+	}
+
+	private boolean hasSibling(int index) {
+		return (units.get(index) & 1) == 1;
+	}
+	
+	private boolean isState(int index) {
+		return (units.get(index) & 2) == 2;
 	}
 
 	public boolean isLeaf(int id) {
@@ -249,7 +257,7 @@ public class DawgBuilder {
 
 		for (int i = 1; i < units.size(); i++) {
 			int id = i;
-			if (labels.get(id) == 0 || units.isState(id)) {
+			if (labels.get(id) == 0 || isState(id)) {
 				int[] hashId = new int[1];
 				findUnit(id, hashId);
 				table.set(hashId[0], id);
@@ -292,17 +300,17 @@ public class DawgBuilder {
 	private boolean areEqual(int nodeId, int unitId) {
 		for (int i = nodes.sibling(nodeId); i != 0;
 				i = nodes.sibling(i)) {
-			if (!units.hasSibling(unitId)) {
+			if (!hasSibling(unitId)) {
 				return false;
 			}
 			unitId++;
 		}
-		if (units.hasSibling(unitId)) {
+		if (hasSibling(unitId)) {
 			return false;
 		}
 
 		for (int i = nodeId; i != 0; i = nodes.sibling(i), unitId--) {
-			if (nodes.unit(i) != units.unit(unitId) ||
+			if (nodes.unit(i) != units.get(unitId) ||
 					nodes.label(i) != labels.get(unitId)) {
 				return false;
 			}
@@ -313,11 +321,11 @@ public class DawgBuilder {
 	private int hashUnit(int id) {
 		int hashValue = 0;
 		for ( ; id != 0; ++id) {
-			int unit = units.unit(id);
+			int unit = units.get(id);
 			int label = labels.get(id);
 			hashValue ^= hash((label << 24) ^ unit);
 
-			if (!units.hasSibling(id)) {
+			if (!hasSibling(id)) {
 				break;
 			}
 		}

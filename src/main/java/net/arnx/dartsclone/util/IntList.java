@@ -20,11 +20,20 @@ public class IntList {
 	}
 	
 	public IntList(int capacity) {
+		this(capacity, 0);
+	}
+	
+	public IntList(int capacity, int size) {
+		if (capacity < size) {
+			throw new IndexOutOfBoundsException();
+		}
+		
 		if (capacity == 0) {
 			this.buf = EMPTY;
 		} else {
 			this.buf = new int[capacity];
 		}
+		this.size = size;
 	}
 	
 	public int get(int index) {
@@ -96,7 +105,6 @@ public class IntList {
 			sb.append(hex.charAt((value >> 8) & 0xF));
 			sb.append(hex.charAt((value >> 4) & 0xF));
 			sb.append(hex.charAt(value & 0xF));
-			sb.append(" ");
 		}
 		return sb.toString();
 	}
