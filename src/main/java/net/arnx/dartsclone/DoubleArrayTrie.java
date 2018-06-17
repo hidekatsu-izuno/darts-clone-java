@@ -76,14 +76,19 @@ public class DoubleArrayTrie {
 		
 		@Override
 		public int compareTo(DoubleArrayEntry o) {
+			int result = 0;
 			int min = Math.min(key.length, o.key.length);
 	        for (int i = 0; i < min; i++) {
-	          int result = (key[i] & 0xFF) - (o.key[i] & 0xFF);
+	          result = (key[i] & 0xFF) - (o.key[i] & 0xFF);
 	          if (result != 0) {
 	            return result;
 	          }
 	        }
-	        return key.length - o.key.length;
+	        result = key.length - o.key.length;
+	        if (result != 0) {
+	        	return result;
+	        }
+	        return value - o.value;
 		}
 		
 		@Override
