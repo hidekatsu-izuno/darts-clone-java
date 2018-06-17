@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -36,9 +37,11 @@ public class DoubleArrayTrie {
 	
 	public static class Builder {
 		private Set<DoubleArrayEntry> keyset = new LinkedHashSet<>();
+		private int maxLength = 0;
 		
-		public Builder put(byte[] key, int value) {
+		public Builder put(String key, int value) {
 			keyset.add(new DoubleArrayEntry(key, value));
+			maxLength = Math.max(key.length(), maxLength);
 			return this;
 		}
 		
@@ -51,19 +54,22 @@ public class DoubleArrayTrie {
 			Collections.sort(list);
 		    
 			DoubleArrayBuilder builder = new DoubleArrayBuilder();
+			
+			byte[] buf = new byte[maxLength * 3];
 			for (DoubleArrayEntry entry : list) {
-				builder.append(entry.key, entry.value);
+				int length = encodeModifiedUtf8(entry.key, buf);
+				builder.append(buf, length, entry.value);
 			}
 			return builder.build();
 		}
 	}
 	
 	private static class DoubleArrayEntry implements Comparable<DoubleArrayEntry> {
-		byte[] key;
+		String key;
 		int value;
 		
-		public DoubleArrayEntry(byte[] key, int value) {
-			if (key == null || key.length == 0) {
+		public DoubleArrayEntry(String key, int value) {
+			if (key == null || key.isEmpty()) {
 				throw new IllegalArgumentException("key must not be empty.");
 			}
 			if (value < 0) {
@@ -76,28 +82,12 @@ public class DoubleArrayTrie {
 		
 		@Override
 		public int compareTo(DoubleArrayEntry o) {
-			int result = 0;
-			int min = Math.min(key.length, o.key.length);
-	        for (int i = 0; i < min; i++) {
-	          result = (key[i] & 0xFF) - (o.key[i] & 0xFF);
-	          if (result != 0) {
-	            return result;
-	          }
-	        }
-	        result = key.length - o.key.length;
-	        if (result != 0) {
-	        	return result;
-	        }
-	        return value - o.value;
+	        return key.compareTo(o.key);
 		}
 		
 		@Override
 		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + Arrays.hashCode(key);
-			result = prime * result + value;
-			return result;
+			return key.hashCode();
 		}
 
 		@Override
@@ -112,10 +102,7 @@ public class DoubleArrayTrie {
 				return false;
 			}
 			DoubleArrayEntry other = (DoubleArrayEntry) obj;
-			if (!Arrays.equals(key, other.key)) {
-				return false;
-			}
-			if (value != other.value) {
+			if (!Objects.equals(key, other.key)) {
 				return false;
 			}
 			return true;
@@ -143,18 +130,32 @@ public class DoubleArrayTrie {
 		return new DoubleArrayTrie(list.toArray());
 	}
 	
+	private static final ThreadLocal<byte[]> THREAD_LOCAL = 
+			new ThreadLocal<byte[]>() {
+		protected byte[] initialValue() {
+			return new byte[256];
+		};
+	};
+	
 	private int[] array;
 	
 	private DoubleArrayTrie(int[] array) {
 		this.array = array;
 	}
 	
-	public int get(byte[] key) {
+	public int get(String key) {
+		byte[] buf = THREAD_LOCAL.get();
+		if (buf.length < key.length() * 3) {
+			buf = new byte[key.length() * 3];
+			THREAD_LOCAL.set(buf);
+		}
+		int length = encodeModifiedUtf8(key, buf);
+		
 		int unit = array[0];
 		int pos = offset(unit);
 		
-		for (int i = 0; i < key.length; i++) {
-			int c = (key[i] & 0xFF);
+		for (int i = 0; i < length; i++) {
+			int c = (buf[i] & 0xFF);
 			
 			pos ^= c;
 			unit = array[pos];
@@ -169,17 +170,24 @@ public class DoubleArrayTrie {
 			return value(array[pos]);
 		} else {
 			return -1;		
-		}		
+		}
 	}
 	
-	public IntStream findByCommonPrefix(byte[] key) {
+	public IntStream findByCommonPrefix(String key) {
+		byte[] buf = THREAD_LOCAL.get();
+		if (buf.length < key.length() * 3) {
+			buf = new byte[key.length() * 3];
+			THREAD_LOCAL.set(buf);
+		}
+		int length = encodeModifiedUtf8(key, buf);
+		
 		IntStream.Builder builder = IntStream.builder();
 		
 		int unit = array[0];
 		int pos = offset(unit);
 		
-		for (int i = 0; i < key.length; i++) {
-			int c = (key[i] & 0xFF);
+		for (int i = 0; i < length; i++) {
+			int c = (buf[i] & 0xFF);
 		
 			pos ^= c;
 			unit = array[pos];
@@ -254,5 +262,23 @@ public class DoubleArrayTrie {
 	
 	private static int offset(int unit) {
 		return (unit >> 10) << ((unit & (1 << 9)) >> 6);
+	}
+	
+	private static int encodeModifiedUtf8(String str, byte[] buf) {
+		int pos = 0;
+		for (int i = 0; i < str.length(); i++) {
+			char c = str.charAt(i);
+			if (c != '\0' && c < '\u0080') {
+				buf[pos++] = (byte)c;
+			} else if (c < '\u0800') {
+				buf[pos++] = (byte)(((c >> 6) & 0x1f) | 0xc0);
+				buf[pos++] = (byte)((c & 0x3f) | 0x80);
+			} else {
+				buf[pos++] = (byte)(((c >> 12) & 0x0f) | 0xe0);
+				buf[pos++] = (byte)(((c >> 6) & 0x3f) | 0x80);
+				buf[pos++] = (byte)((c & 0x3f) | 0x80);
+			}
+		}
+		return pos;
 	}
 }

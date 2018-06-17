@@ -37,8 +37,8 @@ public class DoubleArrayBuilder {
 		dawg.init();
 	}
 	
-	public void append(byte[] key, int value) {
-		dawg.insert(key, value);
+	public void append(byte[] key, int length, int value) {
+		dawg.insert(key, length, value);
 	}
 	
 	public int[] build() {
@@ -51,7 +51,7 @@ public class DoubleArrayBuilder {
 		setOffset(units, 0, 1);
 		setLabel(units, 0, 0);
 
-		IntList table = new IntList(dawg.numIntersections());
+		IntList table = new IntList(dawg.numIntersections(), dawg.numIntersections());
 		if (dawg.child(dawg.root()) != 0) {
 			buildFromDawg(units, dawg, dawg.root(), 0, table);
 		}
@@ -128,7 +128,7 @@ public class DoubleArrayBuilder {
 
 			dawgChildId = dawg.sibling(dawgChildId);
 		}
-		isUseds.set(offset, true);
+		isUseds.set(offset % NUM_EXTRAS, true);
 
 		return offset;
 	}
@@ -144,14 +144,14 @@ public class DoubleArrayBuilder {
 			if (isValidOffset(id, offset, labels)) {
 				return offset;
 			}
-			unfixedId = nexts.get(unfixedId);
+			unfixedId = nexts.get(unfixedId % NUM_EXTRAS);
 		} while (unfixedId != head);
 
 		return units.size() | (id & LOWER_MASK);
 	}
 	
 	private boolean isValidOffset(int id, int offset, IntList labels) {
-		if (isUseds.get(offset)) {
+		if (isUseds.get(offset % NUM_EXTRAS)) {
 			return false;
 		}
 
@@ -161,7 +161,7 @@ public class DoubleArrayBuilder {
 		}
 
 		for (int i = 1; i < labels.size(); i++) {
-			if (isFixeds.get(offset ^ labels.get(i))) {
+			if (isFixeds.get((offset ^ labels.get(i)) % NUM_EXTRAS)) {
 				return false;
 			}
 		}
@@ -175,14 +175,14 @@ public class DoubleArrayBuilder {
 		}
 
 		if (id == head) {
-			head = nexts.get(id);
+			head = nexts.get(id % NUM_EXTRAS);
 			if (head == id) {
 				head = units.size();
 			}
 		}
-		nexts.set(prevs.get(id), nexts.get(id));
-		prevs.set(nexts.get(id), prevs.get(id));
-		isFixeds.set(id, true);
+		nexts.set(prevs.get(id % NUM_EXTRAS) % NUM_EXTRAS, nexts.get(id % NUM_EXTRAS));
+		prevs.set(nexts.get(id % NUM_EXTRAS) % NUM_EXTRAS, prevs.get(id % NUM_EXTRAS));
+		isFixeds.set(id % NUM_EXTRAS, true);
 	}
 	
 	private void expandUnits(IntList units) {
@@ -200,24 +200,24 @@ public class DoubleArrayBuilder {
 
 		if (destNumBlocks > NUM_EXTRA_BLOCKS) {
 			for (int id = srcNumUnits; id < destNumUnits; id++) {
-				isUseds.set(id, false);
-				isFixeds.set(id, false);
+				isUseds.set(id % NUM_EXTRAS, false);
+				isFixeds.set(id % NUM_EXTRAS, false);
 			}
 		}
 
 		for (int i = srcNumUnits + 1; i < destNumUnits; i++) {
-			nexts.set(i - 1, i);
-			prevs.set(i, i - 1);
+			nexts.set((i - 1) % NUM_EXTRAS, i);
+			prevs.set(i % NUM_EXTRAS, i - 1);
 		}
 
-		prevs.set(srcNumUnits, destNumUnits - 1);
-		nexts.set(destNumUnits - 1, srcNumUnits);
+		prevs.set(srcNumUnits % NUM_EXTRAS, destNumUnits - 1);
+		nexts.set((destNumUnits - 1) % NUM_EXTRAS, srcNumUnits);
 
-		prevs.set(srcNumUnits, prevs.get(head));
-		nexts.set(destNumUnits - 1, head);
+		prevs.set(srcNumUnits % NUM_EXTRAS, prevs.get(head % NUM_EXTRAS));
+		nexts.set((destNumUnits - 1) % NUM_EXTRAS, head);
 
-		nexts.set(prevs.get(head), srcNumUnits);
-		prevs.set(head, destNumUnits - 1);
+		nexts.set(prevs.get(head % NUM_EXTRAS) % NUM_EXTRAS, srcNumUnits);
+		prevs.set(head % NUM_EXTRAS, destNumUnits - 1);
 	}
 	
 	private void fixAllBlocks(IntList units) {
@@ -242,14 +242,14 @@ public class DoubleArrayBuilder {
 
 		int unusedOffset = 0;
 		for (int offset = begin; offset != end; offset++) {
-			if (!isUseds.get(offset)) {
+			if (!isUseds.get(offset % NUM_EXTRAS)) {
 				unusedOffset = offset;
 				break;
 			}
 		}
 
 		for (int id = begin; id != end; id++) {
-			if (!isFixeds.get(id)) {
+			if (!isFixeds.get(id % NUM_EXTRAS)) {
 				reserveId(units, id);
 				setLabel(units, id, id ^ unusedOffset);
 			}

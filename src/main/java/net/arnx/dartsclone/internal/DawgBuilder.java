@@ -164,27 +164,23 @@ public class DawgBuilder {
 		}
 	}
 	
-	public void insert(byte[] key, int value) {
+	public void insert(byte[] key, int length, int value) {
 		if (value < 0) {
 			throw new IllegalArgumentException("failed to insert key: negative value");
-		} else if (key.length == 0) {
+		} else if (length == 0) {
 			throw new IllegalArgumentException("failed to insert key: zero-length key");
 		}
 
 		int id = 0;
 		int keyPos = 0;
 
-		for ( ; keyPos <= key.length; keyPos++) {
+		for ( ; keyPos <= length; keyPos++) {
 			int childId = nodeChilds.get(id);
 			if (childId == 0) {
 				break;
 			}
 
-			int keyLabel = key[keyPos] & 0xFF;
-			if (keyPos < key.length && keyLabel == 0) {
-				throw new IllegalStateException("failed to insert key: invalid null character");
-			}
-
+			int keyLabel = (keyPos < length) ? (key[keyPos] & 0xFF) : 0;
 			int unitLabel = nodeLabels.get(childId);
 			if (keyLabel < unitLabel) {
 				throw new IllegalStateException("failed to insert key: wrong key order");
@@ -196,12 +192,12 @@ public class DawgBuilder {
 			id = childId;
 		}
 
-		if (keyPos > key.length) {
+		if (keyPos > length) {
 			return;
 		}
 
-		for ( ; keyPos <= key.length; keyPos++) {
-			int keyLabel = (keyPos < key.length) ? (key[keyPos] & 0xFF) : 0;
+		for ( ; keyPos <= length; keyPos++) {
+			int keyLabel = (keyPos < length) ? (key[keyPos] & 0xFF) : 0;
 			int childId = appendNode();
 
 			if (nodeChilds.get(id) == 0) {
