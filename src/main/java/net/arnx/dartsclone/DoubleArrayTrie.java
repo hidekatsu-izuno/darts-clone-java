@@ -26,9 +26,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
-import net.arnx.dartsclone.internal.DawgBuilder;
 import net.arnx.dartsclone.internal.DoubleArrayBuilder;
-import net.arnx.dartsclone.internal.DoubleArrayEntry;
 import net.arnx.dartsclone.util.IntList;
 
 public class DoubleArrayTrie {
@@ -45,30 +43,77 @@ public class DoubleArrayTrie {
 		}
 		
 		public DoubleArrayTrie build() {
+			return new DoubleArrayTrie(toArray());
+		}
+		
+		public int[] toArray() {
 			List<DoubleArrayEntry> list = new ArrayList<>(keyset);
-			
-			Collections.sort(list, (x, y) -> {
-				byte[] xkey = x.key();
-				byte[] ykey = y.key();
-				int min = Math.min(xkey.length, ykey.length);
-		        for (int i = 0; i < min; i++) {
-		          int result = (xkey[i] & 0xFF) - (ykey[i] & 0xFF);
-		          if (result != 0) {
-		            return result;
-		          }
-		        }
-		        return xkey.length - ykey.length;
-			});
-			
-			DawgBuilder dawg = new DawgBuilder();
-			dawg.init();
-			for (DoubleArrayEntry entry : list) {
-				dawg.insert(entry.key(), entry.value());
-			}
-			dawg.finish();
+			Collections.sort(list);
 		    
 			DoubleArrayBuilder builder = new DoubleArrayBuilder();
-			return new DoubleArrayTrie(builder.build(dawg));
+			for (DoubleArrayEntry entry : list) {
+				builder.append(entry.key, entry.value);
+			}
+			return builder.build();
+		}
+	}
+	
+	private static class DoubleArrayEntry implements Comparable<DoubleArrayEntry> {
+		byte[] key;
+		int value;
+		
+		public DoubleArrayEntry(byte[] key, int value) {
+			if (key == null || key.length == 0) {
+				throw new IllegalArgumentException("key must not be empty.");
+			}
+			if (value < 0) {
+				throw new IllegalArgumentException("value must not be negative.");
+			}
+			
+			this.key = key;
+			this.value = value;
+		}
+		
+		@Override
+		public int compareTo(DoubleArrayEntry o) {
+			int min = Math.min(key.length, o.key.length);
+	        for (int i = 0; i < min; i++) {
+	          int result = (key[i] & 0xFF) - (o.key[i] & 0xFF);
+	          if (result != 0) {
+	            return result;
+	          }
+	        }
+	        return key.length - o.key.length;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + Arrays.hashCode(key);
+			result = prime * result + value;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			DoubleArrayEntry other = (DoubleArrayEntry) obj;
+			if (!Arrays.equals(key, other.key)) {
+				return false;
+			}
+			if (value != other.value) {
+				return false;
+			}
+			return true;
 		}
 	}
 

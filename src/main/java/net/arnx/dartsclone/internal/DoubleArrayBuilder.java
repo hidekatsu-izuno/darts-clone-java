@@ -25,13 +25,25 @@ public class DoubleArrayBuilder {
 	private static final int UPPER_MASK = 0xFF << 21;
 	private static final int LOWER_MASK = 0xFF;
 	
+	DawgBuilder dawg = new DawgBuilder();
+	
 	IntList prevs = new IntList(NUM_EXTRAS, NUM_EXTRAS);
 	IntList nexts = new IntList(NUM_EXTRAS, NUM_EXTRAS);
 	BooleanList isFixeds = new BooleanList(NUM_EXTRAS, NUM_EXTRAS);
 	BooleanList isUseds = new BooleanList(NUM_EXTRAS, NUM_EXTRAS);
 	int head;
 	
-	public int[] build(DawgBuilder dawg) {
+	public DoubleArrayBuilder() {
+		dawg.init();
+	}
+	
+	public void append(byte[] key, int value) {
+		dawg.insert(key, value);
+	}
+	
+	public int[] build() {
+		dawg.finish();
+		
 		IntList units = new IntList();
 		
 		reserveId(units, 0);
@@ -50,6 +62,8 @@ public class DoubleArrayBuilder {
 	}
 	
 	public void clear() {
+		dawg.clear();
+		
 		prevs.clear();
 		nexts.clear();
 		isFixeds.clear();
