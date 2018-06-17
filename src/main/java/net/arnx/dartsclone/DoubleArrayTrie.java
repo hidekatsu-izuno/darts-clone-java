@@ -21,8 +21,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -36,12 +38,16 @@ public class DoubleArrayTrie {
 	}
 	
 	public static class Builder {
-		private Set<DoubleArrayEntry> keyset = new LinkedHashSet<>();
-		private int maxLength = 0;
+		private Map<String, DoubleArrayEntry> keyset = new LinkedHashMap<>();
+		private byte[] buf = new byte[256];
 		
 		public Builder put(String key, int value) {
-			keyset.add(new DoubleArrayEntry(key, value));
-			maxLength = Math.max(key.length(), maxLength);
+			if (buf.length < key.length() * 3) {
+				buf = new byte[key.length() * 3];
+			}
+			
+			int length = escapeKey(key, buf);
+			keyset.put(key, new DoubleArrayEntry(Arrays.copyOf(buf, length), value));
 			return this;
 		}
 		
@@ -50,26 +56,23 @@ public class DoubleArrayTrie {
 		}
 		
 		public int[] toArray() {
-			List<DoubleArrayEntry> list = new ArrayList<>(keyset);
+			List<DoubleArrayEntry> list = new ArrayList<>(keyset.values());
 			Collections.sort(list);
 		    
 			DoubleArrayBuilder builder = new DoubleArrayBuilder();
-			
-			byte[] buf = new byte[maxLength * 3];
 			for (DoubleArrayEntry entry : list) {
-				int length = encodeModifiedUtf8(entry.key, buf);
-				builder.append(buf, length, entry.value);
+				builder.append(entry.key, entry.key.length, entry.value);
 			}
 			return builder.build();
 		}
 	}
 	
 	private static class DoubleArrayEntry implements Comparable<DoubleArrayEntry> {
-		String key;
+		byte[] key;
 		int value;
 		
-		public DoubleArrayEntry(String key, int value) {
-			if (key == null || key.isEmpty()) {
+		public DoubleArrayEntry(byte[] key, int value) {
+			if (key == null || key.length == 0) {
 				throw new IllegalArgumentException("key must not be empty.");
 			}
 			if (value < 0) {
@@ -82,12 +85,20 @@ public class DoubleArrayTrie {
 		
 		@Override
 		public int compareTo(DoubleArrayEntry o) {
-	        return key.compareTo(o.key);
+			int result = 0;
+			int min = Math.min(key.length, o.key.length);
+	        for (int i = 0; i < min; i++) {
+	          result = (key[i] & 0xFF) - (o.key[i] & 0xFF);
+	          if (result != 0) {
+	            return result;
+	          }
+	        }
+	        return key.length - o.key.length;
 		}
 		
 		@Override
 		public int hashCode() {
-			return key.hashCode();
+			return Arrays.hashCode(key);
 		}
 
 		@Override
@@ -95,14 +106,11 @@ public class DoubleArrayTrie {
 			if (this == obj) {
 				return true;
 			}
-			if (obj == null) {
+			if (obj == null || getClass() != obj.getClass()) {
 				return false;
 			}
-			if (getClass() != obj.getClass()) {
-				return false;
-			}
-			DoubleArrayEntry other = (DoubleArrayEntry) obj;
-			if (!Objects.equals(key, other.key)) {
+			DoubleArrayEntry other = (DoubleArrayEntry)obj;
+			if (!Arrays.equals(key, other.key)) {
 				return false;
 			}
 			return true;
@@ -149,7 +157,7 @@ public class DoubleArrayTrie {
 			buf = new byte[key.length() * 3];
 			THREAD_LOCAL.set(buf);
 		}
-		int length = encodeModifiedUtf8(key, buf);
+		int length = escapeKey(key, buf);
 		
 		int unit = array[0];
 		int pos = offset(unit);
@@ -179,7 +187,7 @@ public class DoubleArrayTrie {
 			buf = new byte[key.length() * 3];
 			THREAD_LOCAL.set(buf);
 		}
-		int length = encodeModifiedUtf8(key, buf);
+		int length = escapeKey(key, buf);
 		
 		IntStream.Builder builder = IntStream.builder();
 		
@@ -264,20 +272,37 @@ public class DoubleArrayTrie {
 		return (unit >> 10) << ((unit & (1 << 9)) >> 6);
 	}
 	
-	private static int encodeModifiedUtf8(String str, byte[] buf) {
+	private static int escapeKey(String str, byte[] buf) {
 		int pos = 0;
 		for (int i = 0; i < str.length(); i++) {
 			char c = str.charAt(i);
 			if (c != '\0' && c < '\u0080') {
 				buf[pos++] = (byte)c;
-			} else if (c < '\u0800') {
-				buf[pos++] = (byte)(((c >> 6) & 0x1f) | 0xc0);
-				buf[pos++] = (byte)((c & 0x3f) | 0x80);
-			} else {
-				buf[pos++] = (byte)(((c >> 12) & 0x0f) | 0xe0);
-				buf[pos++] = (byte)(((c >> 6) & 0x3f) | 0x80);
-				buf[pos++] = (byte)((c & 0x3f) | 0x80);
+				continue;
 			}
+			
+			if (c < '\u0800') {
+				buf[pos++] = (byte)(((c >> 6) & 0x1F) | 0xC0);
+				buf[pos++] = (byte)((c & 0x3F) | 0x80);
+				continue;
+			}
+			
+			if (Character.isHighSurrogate(c) && i + 1 < str.length()) {
+				char c2 = str.charAt(i + 1);
+				if (Character.isLowSurrogate(c2)) {
+					int cp = Character.toCodePoint(c, c2);
+					buf[pos++] = (byte)((cp >> 18) | 0xF0);
+					buf[pos++] = (byte)(((cp >> 12) & 0x3F) | 0x80);
+					buf[pos++] = (byte)(((cp >> 6) & 0x3F) | 0x80);
+					buf[pos++] = (byte)((cp & 0x3F) | 0x80);
+					i++;
+					continue;
+				}
+			}
+		
+			buf[pos++] = (byte)(((c >> 12) & 0x0F) | 0xE0);
+			buf[pos++] = (byte)(((c >> 6) & 0x3F) | 0x80);
+			buf[pos++] = (byte)((c & 0x3F) | 0x80);
 		}
 		return pos;
 	}
