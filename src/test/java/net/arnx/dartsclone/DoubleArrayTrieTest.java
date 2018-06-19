@@ -22,10 +22,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
-class DoubleArrayMapTest {
+class DoubleArrayTrieTest {
 
 	@Test
 	void test() throws IOException {
@@ -80,5 +83,33 @@ class DoubleArrayMapTest {
 			index1 = DoubleArrayTrie.load(in);
 		}
 		assertEquals(test1, index1);
+	}
+	
+	@Test
+	void testMany() throws IOException {
+		DoubleArrayTrie.Builder dab = new DoubleArrayTrie.Builder();
+		
+		int repeat = 200;
+		List<String> list = new ArrayList<>();
+		
+		Random random = new Random(31L);
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < repeat; i++) {
+			sb.setLength(0);
+			int length = random.nextInt(10) + 1;
+			for (int j = 0; j < length; j++) {
+				sb.append((char)(random.nextInt(255) + 1));
+			}
+			String key = sb.toString();
+			dab.put(key, i);
+			list.add(key);
+		}
+		
+		DoubleArrayTrie dat = dab.build();
+		for (int i = 0; i < repeat; i++) {
+			String key = list.get(i);
+			int value = dat.get(key);
+			assertEquals(value, i, key + " is invalid: " + value + " != " + i);
+		}
 	}
 }
