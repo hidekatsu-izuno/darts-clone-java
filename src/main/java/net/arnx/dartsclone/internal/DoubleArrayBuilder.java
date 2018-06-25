@@ -25,13 +25,49 @@ public class DoubleArrayBuilder {
 	private static final int UPPER_MASK = 0xFF << 21;
 	private static final int LOWER_MASK = 0xFF;
 	
-	DawgBuilder dawg = new DawgBuilder();
+	private static void setHasLeaf(IntList units, int index, boolean hasLeaf) {
+		int unit = units.get(index);
+		if (hasLeaf) {
+			unit |= 1 << 8;
+		} else {
+			unit &= ~(1 << 8);
+		}
+		units.set(index, unit);
+	}
 	
-	IntList prevs = new IntList(NUM_EXTRAS, NUM_EXTRAS);
-	IntList nexts = new IntList(NUM_EXTRAS, NUM_EXTRAS);
-	BooleanList isFixeds = new BooleanList(NUM_EXTRAS, NUM_EXTRAS);
-	BooleanList isUseds = new BooleanList(NUM_EXTRAS, NUM_EXTRAS);
-	int head;
+	private static void setValue(IntList units, int index, int value) {
+		int unit = units.get(index);
+		unit = value | (1 << 31);
+		units.set(index, unit);
+	}
+	
+	private static void setLabel(IntList units, int index, int label) {
+		int unit = units.get(index);
+		unit = (unit & ~0xFF) | label;
+		units.set(index, unit);
+	}
+	
+	private static void setOffset(IntList units, int index, int offset) {
+		if (offset >= 1 << 29) {
+			throw new IllegalArgumentException("failed to modify unit: too large offset");
+		}
+		int unit = units.get(index);
+		unit &= (1 << 31) | (1 << 8) | 0xFF;
+		if (offset < 1 << 21) {
+			unit |= (offset << 10);
+		} else {
+			unit |= (offset << 2) | (1 << 9);
+		}
+		units.set(index, unit);
+	}
+	
+	private DawgBuilder dawg = new DawgBuilder();
+	
+	private IntList prevs = new IntList(NUM_EXTRAS, NUM_EXTRAS);
+	private IntList nexts = new IntList(NUM_EXTRAS, NUM_EXTRAS);
+	private BooleanList isFixeds = new BooleanList(NUM_EXTRAS, NUM_EXTRAS);
+	private BooleanList isUseds = new BooleanList(NUM_EXTRAS, NUM_EXTRAS);
+	private int head;
 	
 	public DoubleArrayBuilder() {
 		dawg.init();
@@ -187,7 +223,7 @@ public class DoubleArrayBuilder {
 	
 	private void expandUnits(IntList units) {
 		int srcNumUnits = units.size();
-		int srcNumlocks = numBlocks(units);
+		int srcNumlocks = srcNumUnits / BLOCK_SIZE;
 
 		int destNumUnits = srcNumUnits + BLOCK_SIZE;
 		int destNumBlocks = srcNumlocks + 1;
@@ -222,18 +258,15 @@ public class DoubleArrayBuilder {
 	
 	private void fixAllBlocks(IntList units) {
 		int begin = 0;
-		if (numBlocks(units) > NUM_EXTRA_BLOCKS) {
-			begin = numBlocks(units) - NUM_EXTRA_BLOCKS;
+		int numBlocks = units.size() / BLOCK_SIZE;
+		if (numBlocks > NUM_EXTRA_BLOCKS) {
+			begin = numBlocks - NUM_EXTRA_BLOCKS;
 		}
-		int end = numBlocks(units);
+		int end = numBlocks;
 
 		for (int blockId = begin; blockId != end; blockId++) {
 			fixBlock(units, blockId);
 		}
-	}
-	
-	private int numBlocks(IntList units) {
-		return units.size() / BLOCK_SIZE;
 	}
 	
 	private void fixBlock(IntList units, int blockId) {
@@ -254,41 +287,5 @@ public class DoubleArrayBuilder {
 				setLabel(units, id, id ^ unusedOffset);
 			}
 		}
-	}
-	
-	private void setHasLeaf(IntList units, int index, boolean hasLeaf) {
-		int unit = units.get(index);
-		if (hasLeaf) {
-			unit |= 1 << 8;
-		} else {
-			unit &= ~(1 << 8);
-		}
-		units.set(index, unit);
-	}
-	
-	private void setValue(IntList units, int index, int value) {
-		int unit = units.get(index);
-		unit = value | (1 << 31);
-		units.set(index, unit);
-	}
-	
-	private void setLabel(IntList units, int index, int label) {
-		int unit = units.get(index);
-		unit = (unit & ~0xFF) | label;
-		units.set(index, unit);
-	}
-	
-	private void setOffset(IntList units, int index, int offset) {
-		if (offset >= 1 << 29) {
-			throw new IllegalArgumentException("failed to modify unit: too large offset");
-		}
-		int unit = units.get(index);
-		unit &= (1 << 31) | (1 << 8) | 0xFF;
-		if (offset < 1 << 21) {
-			unit |= (offset << 10);
-		} else {
-			unit |= (offset << 2) | (1 << 9);
-		}
-		units.set(index, unit);
 	}
 }

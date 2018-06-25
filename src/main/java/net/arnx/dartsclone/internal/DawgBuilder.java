@@ -32,48 +32,33 @@ public class DawgBuilder {
 		return key;
 	}
 	
-	IntList nodeChilds = new IntList();
-	IntList nodeSiblings = new IntList();
-	IntList nodeLabels = new IntList();
-	BooleanList isNodeStates = new BooleanList();
-	BooleanList hasNodeSiblings = new BooleanList();
-	
-	IntList units = new IntList();
-	IntList labels = new IntList();
-	
-	IntList isIntersectionUnits = new IntList();
-	IntList isIntersectionRanks = new IntList();
-	int isIntersectionNumOnes;
-	int isIntersectionSize;
-
-	IntList table = new IntList();
-	IntList nodeStack = new IntList();
-	IntList recycleBin = new IntList();
-	int numStates;
-	
-	public void dump() {
-		System.out.print("DawgBuilder.java: { ");
-		System.out.print("nodes: { ");
-		System.out.print("childs: " + nodeChilds.toHexString() + ", ");
-		System.out.print("siblings: " + nodeSiblings.toHexString() + ", ");
-		System.out.print("labels: " + nodeLabels.toHexString() + ", ");
-		System.out.print("isStates: " + isNodeStates.toBinaryString() + ", ");
-		System.out.print("hasSiblings: " + hasNodeSiblings.toBinaryString() + " ");
-		System.out.print("}, ");
-		System.out.print("units: " + units.toHexString() +", ");
-		System.out.print("labels: " + labels.toHexString() + ", ");
-		System.out.print("isIntersections: { ");
-		System.out.print("units: " + isIntersectionUnits.toHexString() + ", ");
-		System.out.print("ranks: " + isIntersectionRanks.toHexString() + ", ");
-		System.out.print("numOnes: " + isIntersectionNumOnes + ", ");
-		System.out.print("size: " + isIntersectionSize + " ");
-		System.out.print("}, ");
-		System.out.print("table: " + table.toHexString() + ", ");
-		System.out.print("nodeStack: " + nodeStack.toHexString() + ", ");
-		System.out.print("recycleBin: " + recycleBin.toHexString() + ", ");
-		System.out.print("numStates: " + numStates + " ");
-		System.out.println("}");
+	private static int popCount(int unit) {
+		unit = ((unit & 0xAAAAAAAA) >> 1) + (unit & 0x55555555);
+		unit = ((unit & 0xCCCCCCCC) >> 2) + (unit & 0x33333333);
+		unit = ((unit >> 4) + unit) & 0x0F0F0F0F;
+		unit += unit >> 8;
+		unit += unit >> 16;
+		return unit & 0xFF;
 	}
+	
+	private IntList nodeChilds = new IntList();
+	private IntList nodeSiblings = new IntList();
+	private IntList nodeLabels = new IntList();
+	private BooleanList isNodeStates = new BooleanList();
+	private BooleanList hasNodeSiblings = new BooleanList();
+	
+	private IntList units = new IntList();
+	private IntList labels = new IntList();
+	
+	private IntList isIntersectionUnits = new IntList();
+	private IntList isIntersectionRanks = new IntList();
+	private int isIntersectionNumOnes;
+	private int isIntersectionSize;
+
+	private IntList table = new IntList();
+	private IntList nodeStack = new IntList();
+	private IntList recycleBin = new IntList();
+	private int numStates;
 	
 	public int root() {
 		return 0;
@@ -358,8 +343,7 @@ public class DawgBuilder {
 	}
 	
 	private boolean areEqual(int nodeId, int unitId) {
-		for (int i = nodeSiblings.get(nodeId); i != 0;
-				i = nodeSiblings.get(i)) {
+		for (int i = nodeSiblings.get(nodeId); i != 0; i = nodeSiblings.get(i)) {
 			if (!hasSibling(unitId)) {
 				return false;
 			}
@@ -370,8 +354,8 @@ public class DawgBuilder {
 		}
 
 		for (int i = nodeId; i != 0; i = nodeSiblings.get(i), unitId--) {
-			if (nodeUnit(i) != units.get(unitId) ||
-					nodeLabels.get(i) != labels.get(unitId)) {
+			if (nodeUnit(i) != units.get(unitId)
+					|| nodeLabels.get(i) != labels.get(unitId)) {
 				return false;
 			}
 		}
@@ -409,12 +393,30 @@ public class DawgBuilder {
 		return (nodeChilds.get(index) << 2) | (isNodeStates.get(index) ? 2 : 0) | (hasNodeSiblings.get(index) ? 1 : 0);
 	}
 	
-	private static int popCount(int unit) {
-		unit = ((unit & 0xAAAAAAAA) >> 1) + (unit & 0x55555555);
-		unit = ((unit & 0xCCCCCCCC) >> 2) + (unit & 0x33333333);
-		unit = ((unit >> 4) + unit) & 0x0F0F0F0F;
-		unit += unit >> 8;
-		unit += unit >> 16;
-		return unit & 0xFF;
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("DawgBuilder: { ");
+		sb.append("nodes: { ");
+		sb.append("childs: ").append(nodeChilds.toHexString()).append(", ");
+		sb.append("siblings: ").append(nodeSiblings.toHexString()).append(", ");
+		sb.append("labels: ").append(nodeLabels.toHexString()).append(", ");
+		sb.append("isStates: ").append(isNodeStates.toBinaryString()).append(", ");
+		sb.append("hasSiblings: ").append(hasNodeSiblings.toBinaryString()).append(" ");
+		sb.append("}, ");
+		sb.append("units: ").append(units.toHexString()).append(", ");
+		sb.append("labels: ").append(labels.toHexString()).append(", ");
+		sb.append("isIntersections: { ");
+		sb.append("units: ").append(isIntersectionUnits.toHexString()).append(", ");
+		sb.append("ranks: ").append(isIntersectionRanks.toHexString()).append(", ");
+		sb.append("numOnes: ").append(isIntersectionNumOnes).append(", ");
+		sb.append("size: ").append(isIntersectionSize).append(" ");
+		sb.append("}, ");
+		sb.append("table: ").append(table.toHexString()).append(", ");
+		sb.append("nodeStack: ").append(nodeStack.toHexString()).append(", ");
+		sb.append("recycleBin: ").append(recycleBin.toHexString()).append(", ");
+		sb.append("numStates: ").append(numStates).append(" ");
+		sb.append("}");
+		return sb.toString();
 	}
 }
