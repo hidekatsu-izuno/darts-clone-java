@@ -167,7 +167,7 @@ public class DawgBuilder {
 	public void insert(byte[] key, int length, int value) {
 		if (value < 0) {
 			throw new IllegalArgumentException("failed to insert key: negative value");
-		} else if (length == 0) {
+		} else if (length <= 0) {
 			throw new IllegalArgumentException("failed to insert key: zero-length key");
 		}
 

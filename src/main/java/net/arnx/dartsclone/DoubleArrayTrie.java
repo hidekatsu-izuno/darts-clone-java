@@ -21,9 +21,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 import net.arnx.dartsclone.internal.DoubleArrayBuilder;
@@ -35,7 +33,7 @@ public class DoubleArrayTrie {
 	}
 	
 	public static class Builder {
-		private Map<String, DoubleArrayEntry> keyset = new LinkedHashMap<>();
+		private List<DoubleArrayEntry> keyset = new ArrayList<>();
 		private byte[] buf = new byte[256];
 		
 		public Builder put(String key, int value) {
@@ -44,7 +42,7 @@ public class DoubleArrayTrie {
 			}
 			
 			int length = escapeKey(key, buf);
-			keyset.put(key, new DoubleArrayEntry(Arrays.copyOf(buf, length), value));
+			keyset.add(new DoubleArrayEntry(Arrays.copyOf(buf, length), value));
 			return this;
 		}
 		
@@ -53,11 +51,10 @@ public class DoubleArrayTrie {
 		}
 		
 		public int[] toArray() {
-			List<DoubleArrayEntry> list = new ArrayList<>(keyset.values());
-			Collections.sort(list);
+			Collections.sort(keyset);
 		    
 			DoubleArrayBuilder builder = new DoubleArrayBuilder();
-			for (DoubleArrayEntry entry : list) {
+			for (DoubleArrayEntry entry : keyset) {
 				builder.append(entry.key, entry.key.length, entry.value);
 			}
 			return builder.build();

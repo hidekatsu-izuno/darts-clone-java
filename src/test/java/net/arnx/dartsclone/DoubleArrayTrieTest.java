@@ -23,8 +23,10 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -89,23 +91,30 @@ class DoubleArrayTrieTest {
 	void testMany() throws IOException {
 		DoubleArrayTrie.Builder dab = new DoubleArrayTrie.Builder();
 		
-		int repeat = 200;
+		int repeat = 10000;
 		List<String> list = new ArrayList<>();
+		Set<String> check = new HashSet<>();
 		
 		Random random = new Random(31L);
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < repeat; i++) {
+			String key;
 			sb.setLength(0);
-			int length = random.nextInt(10) + 1;
-			for (int j = 0; j < length; j++) {
-				sb.append((char)(random.nextInt(255) + 1));
-			}
-			String key = sb.toString();
+			do {
+				int length = random.nextInt(10) + 1;
+				for (int j = 0; j < length; j++) {
+					sb.append((char)(random.nextInt(255) + 1));
+				}
+				key = sb.toString();
+			} while (check.contains(key));
+			
 			dab.put(key, i);
 			list.add(key);
+			
+			check.add(key);
 		}
 		
-		DoubleArrayTrie dat = dab.build();
+		DoubleArrayTrie dat = dab.build();		
 		for (int i = 0; i < repeat; i++) {
 			String key = list.get(i);
 			int value = dat.get(key);
