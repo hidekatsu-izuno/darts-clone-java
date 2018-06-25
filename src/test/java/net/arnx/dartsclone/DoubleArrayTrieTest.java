@@ -91,7 +91,7 @@ class DoubleArrayTrieTest {
 	void testMany() throws IOException {
 		DoubleArrayTrie.Builder dab = new DoubleArrayTrie.Builder();
 		
-		int repeat = 10000;
+		int repeat = 100000;
 		List<String> list = new ArrayList<>();
 		Set<String> check = new HashSet<>();
 		
