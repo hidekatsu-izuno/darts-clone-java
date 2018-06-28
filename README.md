@@ -34,7 +34,7 @@ dab.put("ARCO", 3);
 dab.put("ARPA", 4);
 dab.put("ARPANET", 5);
 dab.put("ASCII", 6);
-DoubleArrayTrie da = dab2.build();
+DoubleArrayTrie da = dab.build();
 
 // Gets value by searching in the index
 int value = da.get("ALGOL");
