@@ -5,7 +5,7 @@
 
 Double-ARray Trie System clone written in Java.
 
-This library is based on [Darts Clone](https://github.com/s-yata/darts-clone).
+This library is based on [Darts Clone](https://github.com/s-yata/darts-clone) that known as a fast and efficient library.
 
 ## Getting Started
 
